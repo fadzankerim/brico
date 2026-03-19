@@ -13,6 +13,8 @@ import {
   Search,
 } from 'lucide-react'
 import { useState } from 'react'
+import Navbar from '../../components/Navbar'
+import Footer from '../../components/Footer'
 
 //  Mock featured - replace with api call 
 const FEATURED = [
@@ -54,14 +56,22 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [city, setCity] = useState('')
 
-  function handleSearch(e: React.FormEvent) {
+  function handleSearch(e: React.SubmitEvent) {
     e.preventDefault()
-    navigate(`/salons${city ? `?city=${encodeURIComponent(city)}` : ''}`)
+
+    if(city.trim()){
+      const params = new URLSearchParams()
+      params.set('city', city.trim())
+
+      navigate(`/salons?${params.toString()}`)
+    } else {
+      navigate(`/salons`)
+    }
   }
 
   return (
     <div className="overflow-x-hidden">
-
+      <Navbar />
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-center pt-16">
         {/* Background orbs */}
@@ -105,7 +115,7 @@ export default function LandingPage() {
                   <path d="M2 8 Q75 2 150 8 Q225 14 298 8" stroke="#e94560" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
                 </svg>
               </span>{' '}
-              u tvojem gradu
+              u tvom gradu
             </motion.h1>
 
             <motion.p
@@ -196,7 +206,7 @@ export default function LandingPage() {
                       </div>
                     )}
                     <div className="absolute bottom-3 right-3 text-xs font-bold text-white bg-black/40 backdrop-blur-sm px-2 py-1 rounded-lg">
-                      od €{salon.price}
+                      od {salon.price} KM
                     </div>
                   </div>
                   <div className="p-4">
@@ -311,7 +321,7 @@ export default function LandingPage() {
           </FadeIn>
         </div>
       </section>
-
+      <Footer/>
     </div>
   )
 }
