@@ -2,7 +2,8 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 
 
 import { lazy, Suspense } from "react";
-import useAuthStore from "./store/authStore";
+import { useAuthStore } from "./store/authStore";
+
 const LandingPage = lazy(() => import("@/pages/public/LandingPage"));
 const SalonSearchPage = lazy(() => import("@/pages/public/SalonSearchPage"));
 const SalonProfilePage = lazy(() => import("@/pages/public/SalonProfilePage"));
