@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-// ─── Mock featured salons (will be replaced with API data) ─────────────────
+//  Mock featured - replace with api call 
 const FEATURED = [
   { id: 1, slug: 'elite-cut-sarajevo', name: 'Elite Cut', city: 'Sarajevo', rating: 4.9, reviews: 213, price: 15, verified: true, color: 'from-rose-900 to-rose-800' },
   { id: 2, slug: 'barber-king-mostar', name: 'Barber King', city: 'Mostar', rating: 4.7, reviews: 148, price: 12, verified: true, color: 'from-slate-800 to-slate-700' },
@@ -137,7 +137,7 @@ export default function LandingPage() {
               </div>
               <button
                 type="submit"
-                className="px-6 py-3.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-sm transition-colors shadow-lg shadow-rose-500/25 whitespace-nowrap"
+                className="px-6 py-3.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-sm transition-colors shadow-lg shadow-rose-500/25 whitespace-nowrap hover:cursor-pointer"
               >
                 Pretraži
               </button>
