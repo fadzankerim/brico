@@ -31,9 +31,9 @@ export interface Service {
 
 export interface WorkingHours {
   id: number
-  dayOfWeek: number // 0=Mon, 6=Sun
-  startTime: string // "09:00"
-  endTime: string   // "18:00"
+  dayOfWeek: number // 0=Pon, 6=Uto
+  startTime: string // 09:00
+  endTime: string   // 18:00
   isDayOff: boolean
 }
  
