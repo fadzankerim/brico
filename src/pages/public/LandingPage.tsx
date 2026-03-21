@@ -71,7 +71,7 @@ export default function LandingPage() {
 
   return (
     <div className="overflow-x-hidden">
-      <Navbar />
+      
       {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-center pt-16">
         {/* Background orbs */}
@@ -321,7 +321,7 @@ export default function LandingPage() {
           </FadeIn>
         </div>
       </section>
-      <Footer/>
+      
     </div>
   )
 }
