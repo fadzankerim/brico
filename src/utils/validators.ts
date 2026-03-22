@@ -12,7 +12,7 @@ export const registerSchema = z
     phone: z.string().optional(),
     password: z.string().min(8, 'Lozinka mora imati najmanje 8 karaktera'),
     confirmPassword: z.string(),
-    role: z.enum(['CLIENT', 'SALON_OWNER']).default('CLIENT'),
+    role: z.enum(['CLIENT', 'SALON_OWNER']),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Lozinke se ne podudaraju',

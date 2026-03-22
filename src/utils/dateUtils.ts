@@ -37,8 +37,8 @@ export function formatDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`
 }
 
-export function formatPrice(amount: number, currency = '€'): string {
-  return `${currency}${amount.toFixed(2)}`
+export function formatPrice(amount: number, currency = 'KM'): string {
+  return `${amount.toFixed(2)} ${currency}`
 }
 
 export function isAppointmentPast(endTime: string): boolean {

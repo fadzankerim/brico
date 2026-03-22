@@ -1,11 +1,21 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
+
+
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api',
   headers: { 'Content-Type': 'application/json' },
   timeout: 15_000,
 })
+
+
+
+// zakomantarisati kasnije!
+import { initMockHandlers } from '../db/handlers.ts'
+initMockHandlers(api)
+
 
 // Attach JWT on every request
 api.interceptors.request.use((config) => {
