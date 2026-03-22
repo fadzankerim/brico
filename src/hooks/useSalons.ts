@@ -29,6 +29,16 @@ export function useSalon(slug: string) {
   })
 }
 
+export function useSalonById(id: number | string | undefined) {
+  const numId = Number(id)
+  return useQuery({
+    queryKey: salonKeys.detail(numId),
+    queryFn:  () => salonService.getById(numId),
+    staleTime: 1000 * 60 * 5,
+    enabled:  !!id && !isNaN(numId),
+  })
+}
+
 export function useFavorites() {
   const { isAuthenticated } = useAuthStore()
   return useQuery({

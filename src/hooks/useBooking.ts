@@ -63,6 +63,25 @@ export function useCancelAppointment() {
   })
 }
 
+export function useUpdateAppointmentStatus(salonId?: number) {
+  const queryClient = useQueryClient()
+ 
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      bookingService.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.mine() })
+      if (salonId) {
+        queryClient.invalidateQueries({ queryKey: appointmentKeys.salonAll(salonId) })
+      }
+      toast.success('Status termina ažuriran')
+    },
+    onError: () => {
+      toast.error('Greška pri ažuriranju statusa')
+    },
+  })
+}
+
 export function useSalonAppointments(salonId: number | undefined) {
   return useQuery({
     queryKey: appointmentKeys.salonAll(salonId!),

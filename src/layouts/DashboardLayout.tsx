@@ -1,80 +1,76 @@
 import { useState } from 'react'
-import { NavLink, Outlet, Link } from 'react-router-dom'
+import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Scissors,
-  LayoutDashboard,
-  CalendarDays,
-  Users,
-  Sparkles,
-  BarChart3,
-  Settings,
-  Heart,
-  Menu,
-  X,
-  Bell,
-  ChevronDown,
-  LogOut,
+  Scissors, LayoutDashboard, CalendarDays, Users, Sparkles,
+  BarChart3, Settings, Heart, Menu, Bell, LogOut,
 } from 'lucide-react'
-import { useAuthStore } from '../store/authStore'
+
 import { useLogout } from '../hooks/useAuth'
+import { useAuthStore } from '../store/authStore'
 import { cn } from '../lib/utils'
 
 
-type NavItem = { label: string; href: string; icon: React.ElementType }
+type NavItem = { label: string; href: string; icon: React.ElementType; tab?: string }
 
+// Owner nav — all point to /owner/dashboard with ?tab= param
 const OWNER_NAV: NavItem[] = [
-  { label: 'Pregled', href: '/owner/dashboard', icon: LayoutDashboard },
-  { label: 'Kalendar', href: '/owner/calendar', icon: CalendarDays },
-  { label: 'Osoblje', href: '/owner/staff', icon: Users },
-  { label: 'Usluge', href: '/owner/services', icon: Sparkles },
-  { label: 'Analytics', href: '/owner/analytics', icon: BarChart3 },
-  { label: 'Postavke', href: '/owner/settings', icon: Settings },
+  { label: 'Pregled',   href: '/owner/dashboard?tab=overview',   icon: LayoutDashboard },
+  { label: 'Kalendar',  href: '/owner/dashboard?tab=calendar',   icon: CalendarDays    },
+  { label: 'Osoblje',   href: '/owner/dashboard?tab=staff',      icon: Users           },
+  { label: 'Usluge',    href: '/owner/dashboard?tab=services',   icon: Sparkles        },
+  { label: 'Analytics', href: '/owner/dashboard?tab=analytics',  icon: BarChart3       },
+  { label: 'Postavke',  href: '/owner/dashboard?tab=settings',   icon: Settings        },
 ]
 
 const HAIRDRESSER_NAV: NavItem[] = [
-  { label: 'Pregled', href: '/hairdresser/dashboard', icon: LayoutDashboard },
-  { label: 'Kalendar', href: '/hairdresser/calendar', icon: CalendarDays },
-  { label: 'Zarada', href: '/hairdresser/revenue', icon: BarChart3 },
-  { label: 'Postavke', href: '/hairdresser/settings', icon: Settings },
+  { label: 'Pregled',  href: '/hairdresser/dashboard?tab=overview',  icon: LayoutDashboard },
+  { label: 'Kalendar', href: '/hairdresser/dashboard?tab=calendar',  icon: CalendarDays    },
+  { label: 'Zarada',   href: '/hairdresser/dashboard?tab=revenue',   icon: BarChart3       },
+  { label: 'Postavke', href: '/hairdresser/dashboard?tab=settings',  icon: Settings        },
 ]
 
 const CLIENT_NAV: NavItem[] = [
-  { label: 'Termini', href: '/dashboard', icon: CalendarDays },
-  { label: 'Omiljeni', href: '/favorites', icon: Heart },
-  { label: 'Postavke', href: '/settings', icon: Settings },
+  { label: 'Termini',  href: '/dashboard',  icon: CalendarDays },
+  { label: 'Omiljeni', href: '/favorites',  icon: Heart        },
+  { label: 'Postavke', href: '/settings',   icon: Settings     },
 ]
 
 export default function DashboardLayout() {
-  const { user } = useAuthStore()
-  const logout = useLogout()
+  const { user }   = useAuthStore()
+  const logout     = useLogout()
+  const location   = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const navItems =
-    user?.role === 'SALON_OWNER'
-      ? OWNER_NAV
-      : user?.role === 'HAIRDRESSER'
-        ? HAIRDRESSER_NAV
-        : CLIENT_NAV
+    user?.role === 'SALON_OWNER'  ? OWNER_NAV       :
+    user?.role === 'HAIRDRESSER'  ? HAIRDRESSER_NAV :
+    CLIENT_NAV
 
   const roleLabel =
-    user?.role === 'SALON_OWNER'
-      ? 'Vlasnik Salona'
-      : user?.role === 'HAIRDRESSER'
-        ? 'Frizer'
-        : 'Klijent'
+    user?.role === 'SALON_OWNER' ? 'Vlasnik Salona' :
+    user?.role === 'HAIRDRESSER' ? 'Frizer'          : 'Klijent'
 
   const initials = user?.fullName
-    ? user.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     : 'U'
 
+  // Check active: match path + tab param
+  function isActive(href: string) {
+    const [path, query] = href.split('?')
+    const tab = query?.replace('tab=', '')
+    const currentTab = new URLSearchParams(location.search).get('tab') ?? 'overview'
+    if (tab) {
+      return location.pathname === path && currentTab === tab
+    }
+    return location.pathname === path
+  }
+
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-    <aside
-      className={cn(
-        'flex flex-col bg-[#060912] border-r border-white/5',
-        mobile ? 'w-full h-full' : 'w-60 hidden md:flex sticky top-0 h-screen'
-      )}
-    >
+    <aside className={cn(
+      'flex flex-col bg-[#060912] border-r border-white/5',
+      mobile ? 'w-full h-full' : 'w-60 hidden md:flex sticky top-0 h-screen'
+    )}>
       {/* Logo */}
       <div className="px-5 h-16 flex items-center border-b border-white/5 shrink-0">
         <Link to="/" className="flex items-center gap-2">
@@ -88,30 +84,27 @@ export default function DashboardLayout() {
       </div>
 
       {/* Role badge */}
-      <div className="px-4 py-3 border-b border-white/5">
+      <div className="px-4 py-2.5 border-b border-white/5">
         <span className="text-xs text-slate-500 uppercase tracking-wider">{roleLabel}</span>
       </div>
 
-      {/* Nav items */}
+      {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
+        {navItems.map(item => (
+          <Link
             key={item.href}
             to={item.href}
-            end={item.href.split('/').length <= 2}
             onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-rose-500/15 text-rose-400 border-l-2 border-rose-500 pl-[10px]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              )
-            }
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+              isActive(item.href)
+                ? 'bg-rose-500/15 text-rose-400 border-l-2 border-rose-500 pl-[10px]'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            )}
           >
             <item.icon className="w-4 h-4 shrink-0" />
             {item.label}
-          </NavLink>
+          </Link>
         ))}
       </nav>
 
@@ -139,23 +132,18 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen flex bg-[#080C14] text-white">
-      {/* Desktop sidebar */}
       <Sidebar />
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile overlay */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 md:hidden"
           >
             <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
             <motion.div
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="relative z-10 w-72 h-full"
             >
@@ -165,9 +153,8 @@ export default function DashboardLayout() {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
         <header className="h-16 flex items-center justify-between px-5 border-b border-white/5 bg-[#080C14] sticky top-0 z-30">
           <button
             onClick={() => setMobileOpen(true)}
@@ -175,24 +162,17 @@ export default function DashboardLayout() {
           >
             <Menu className="w-5 h-5" />
           </button>
-
           <div className="hidden md:block">
-            <h1 className="text-sm font-medium text-slate-400">
-              {user?.role === 'SALON_OWNER' && 'Admin Panel'}
-              {user?.role === 'HAIRDRESSER' && 'Frizer Panel'}
-              {user?.role === 'CLIENT' && 'Moj Profil'}
-            </h1>
+            <p className="text-sm text-slate-400">{roleLabel} · {user?.fullName}</p>
           </div>
-
           <div className="flex items-center gap-2 ml-auto">
             <button className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors">
-              <Bell className="w-4.5 h-4.5" />
+              <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
             </button>
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-5 md:p-8 overflow-auto">
           <Outlet />
         </main>

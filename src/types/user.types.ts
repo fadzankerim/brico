@@ -9,7 +9,7 @@ export type User = {
     phone?: string
     profilePhoto?: string
     role: UserRole
-    updatedAt: Date;
+    emailVerified?: boolean
     createdAt: string
 };
 
