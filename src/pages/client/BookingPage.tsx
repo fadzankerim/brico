@@ -21,10 +21,10 @@ export default function BookingPage() {
   const navigate           = useNavigate()
 
   const { step, data, nextStep, prevStep, setData, reset } = useBookingStore()
-  const { data: salon, isLoading } = useSalonById(salonId)   // ← fixed
+  const { data: salon, isLoading } = useSalonById(salonId)   
   const createAppointment = useCreateAppointment()
 
-  // Pre-select hairdresser / service from query params
+  // Pre select hairdresser 
   useEffect(() => {
     if (!salon) return
     setData({ salonId: salon.id, salonName: salon.name })
