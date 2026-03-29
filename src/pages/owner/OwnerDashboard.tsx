@@ -17,8 +17,6 @@ import AddAppointmentModal from "../../components/AddAppointmentModal"
 
 
 
-
-
 const MOCK_REVENUE = [
   { month: 'Jan', revenue: 2400 }, { month: 'Feb', revenue: 3100 },
   { month: 'Mar', revenue: 2800 }, { month: 'Apr', revenue: 3600 },
@@ -64,7 +62,7 @@ export default function OwnerDashboard() {
   const monthrevenue = completed.reduce((sum, a) => sum + a.price, 0)
 
   const hairdressers = Array.from(
-    new Map(appointments.map((a) => [a.hairdresserId, { id: a.hairdresserId, fullName: a.hairdresserName }])).values()
+    new Map(appointments.map((a) => [a.hairdresserId, { id: a.hairdresserId, userId: a.hairdresserId, salonId: OWNER_SALON_ID, fullName: a.hairdresserName, isActive: true }])).values()
   )
 
 
@@ -210,19 +208,14 @@ export default function OwnerDashboard() {
       )}
 
       <AddAppointmentModal
-        //open={addModalOpen}
-        //onClose={() => { setAddModal(false); setEditTarget(null) }}
-        //onSave={() => { setAddModal(false); setEditTarget(null) }}
-        //hairdressers={hairdressers}
-        //services={[]}
-        //editAppointment={editTarget}
+        open={addModalOpen}
+        onClose={() => { setAddModal(false); setEditTarget(null) }}
+        onSave={() => { setAddModal(false); setEditTarget(null) }}
+        hairdressers={hairdressers}
+        services={[]}
+        editAppointment={editTarget}
       />
     </div>
-
-    
-
-    
-
     
   )
 
