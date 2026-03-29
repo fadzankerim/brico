@@ -5,7 +5,7 @@ interface StatCardProps{
     label:string;
     value: string;
     icon: React.ElementType;
-    change?: {value:number, label: string};
+    change?: {value:number, label?: string};
     accent?: 'rose' | 'emerald' | 'blue' | 'amber'
   className?: string
 }

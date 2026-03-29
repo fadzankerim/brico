@@ -78,7 +78,7 @@ export default function DashboardLayout() {
             <Scissors className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
           </div>
           <span className="font-display font-bold text-base">
-            Hair<span className="text-rose-500">Book</span>
+            Bri<span className="text-rose-500">co</span>
           </span>
         </Link>
       </div>
