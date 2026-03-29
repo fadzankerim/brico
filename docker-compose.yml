@@ -1,0 +1,281 @@
+version: "3.9"
+
+services:
+
+  # ─── Infrastructure ───────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: brico-postgres
+    environment:
+      POSTGRES_USER: brico
+      POSTGRES_PASSWORD: brico_pass
+      POSTGRES_MULTIPLE_DATABASES: brico_users,brico_salons,brico_appointments,brico_notifications
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    ports:
+      - "5432:5432"
+    networks:
+      - brico-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brico"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:7-jammy
+    container_name: brico-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: brico_events
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - brico-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: brico-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - brico-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Spring Cloud Infrastructure ──────────────────────────────
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    container_name: brico-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - brico-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    container_name: brico-config
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,native
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    volumes:
+      - ./config-repo:/config-repo
+    ports:
+      - "8888:8888"
+    networks:
+      - brico-net
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/application/default 2>&1 | grep -q propertySources"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # ─── Microservices ────────────────────────────────────────────
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: brico-user-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brico_users
+      SPRING_DATASOURCE_USERNAME: brico
+      SPRING_DATASOURCE_PASSWORD: brico_pass
+      APP_JWT_SECRET: brico_super_secret_jwt_key_min_32_chars_long
+      APP_JWT_EXPIRATION: 86400000
+      APP_JWT_REFRESH_EXPIRATION: 604800000
+    ports:
+      - "8081:8081"
+    networks:
+      - brico-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  salon-service:
+    build:
+      context: .
+      dockerfile: salon-service/Dockerfile
+    container_name: brico-salon-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brico_salons
+      SPRING_DATASOURCE_USERNAME: brico
+      SPRING_DATASOURCE_PASSWORD: brico_pass
+    ports:
+      - "8082:8082"
+    networks:
+      - brico-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  appointment-service:
+    build:
+      context: .
+      dockerfile: appointment-service/Dockerfile
+    container_name: brico-appointment-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brico_appointments
+      SPRING_DATASOURCE_USERNAME: brico
+      SPRING_DATASOURCE_PASSWORD: brico_pass
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      BRICO_RABBITMQ_EXCHANGE: brico.appointments
+      BRICO_RABBITMQ_QUEUE_BOOKED: notification.appointment.booked
+      BRICO_RABBITMQ_QUEUE_CONFIRMED: appointment.confirmed
+      BRICO_RABBITMQ_QUEUE_ROLLBACK: appointment.rollback
+      BRICO_RABBITMQ_ROUTING_BOOKED: appointment.booked
+      BRICO_RABBITMQ_ROUTING_CONFIRMED: appointment.confirmed
+      BRICO_RABBITMQ_ROUTING_ROLLBACK: appointment.rollback
+      GRPC_SYSTEM_EVENTS_HOST: system-events-service
+      GRPC_SYSTEM_EVENTS_PORT: 9090
+    ports:
+      - "8083:8083"
+    networks:
+      - brico-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: brico-notification-service
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/brico_notifications
+      SPRING_DATASOURCE_USERNAME: brico
+      SPRING_DATASOURCE_PASSWORD: brico_pass
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      BRICO_RABBITMQ_EXCHANGE: brico.appointments
+      BRICO_RABBITMQ_QUEUE_BOOKED: notification.appointment.booked
+      BRICO_RABBITMQ_QUEUE_CONFIRMED: appointment.confirmed
+      BRICO_RABBITMQ_QUEUE_ROLLBACK: appointment.rollback
+      BRICO_RABBITMQ_ROUTING_BOOKED: appointment.booked
+      BRICO_RABBITMQ_ROUTING_CONFIRMED: appointment.confirmed
+      BRICO_RABBITMQ_ROUTING_ROLLBACK: appointment.rollback
+    ports:
+      - "8084:8084"
+    networks:
+      - brico-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  system-events-service:
+    build:
+      context: .
+      dockerfile: system-events-service/Dockerfile
+    container_name: brico-system-events
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8085
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/brico_events
+      GRPC_SERVER_PORT: 9090
+    ports:
+      - "8085:8085"
+      - "9090:9090"
+    networks:
+      - brico-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: brico-api-gateway
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SERVER_PORT: 8080
+      APP_JWT_SECRET: brico_super_secret_jwt_key_min_32_chars_long
+      APP_JWT_EXPIRATION: 86400000
+    ports:
+      - "8080:8080"
+    networks:
+      - brico-net
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─── Frontend ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend/brico
+      dockerfile: Dockerfile
+    container_name: brico-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - brico-net
+    depends_on:
+      - api-gateway
+
+networks:
+  brico-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongo_data:

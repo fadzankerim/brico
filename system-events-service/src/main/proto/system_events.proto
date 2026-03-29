@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package com.nwt.systemevents;
+
+option java_package = "com.nwt.systemeventsservice.grpc.proto";
+option java_outer_classname = "SystemEventsProto";
+option java_multiple_files = true;
+
+service SystemEventsService {
+  rpc LogEvent (LogEventRequest) returns (LogEventResponse);
+  rpc GetEvents (GetEventsRequest) returns (GetEventsResponse);
+}
+
+enum ActionType {
+  CREATE = 0;
+  DELETE = 1;
+  GET = 2;
+  UPDATE = 3;
+}
+
+enum ResponseType {
+  SUCCESS = 0;
+  ERROR = 1;
+}
+
+message LogEventRequest {
+  string microservice = 1;
+  string user_id = 2;
+  ActionType action_type = 3;
+  string resource_name = 4;
+  ResponseType response_type = 5;
+  string timestamp = 6;
+  string detail = 7;
+}
+
+message LogEventResponse {
+  bool success = 1;
+  string event_id = 2;
+}
+
+message GetEventsRequest {
+  string microservice = 1;
+  string user_id = 2;
+  int32 page = 3;
+  int32 size = 4;
+}
+
+message GetEventsResponse {
+  repeated EventRecord events = 1;
+  int64 total_count = 2;
+}
+
+message EventRecord {
+  string event_id = 1;
+  string microservice = 2;
+  string user_id = 3;
+  ActionType action_type = 4;
+  string resource_name = 5;
+  ResponseType response_type = 6;
+  string timestamp = 7;
+  string detail = 8;
+}
