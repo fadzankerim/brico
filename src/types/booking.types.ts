@@ -6,33 +6,63 @@ export type AppointmentStatus =
   | 'CANCELLED'
   | 'NO_SHOW'
 
+  export interface AppointmentService {
+  serviceId:       number
+  serviceName:     string
+  price:           number
+  durationMinutes: number
+}
 
+export interface InvoiceItem {
+  name:     string
+  price:    number
+  duration: number   // minutes
+}
+
+export interface Invoice {
+  invoiceNumber:   string   // "HB-20260330-0001"
+  appointmentId:   number
+  clientName:      string
+  clientEmail:     string
+  salonName:       string
+  salonAddress:    string
+  hairdresserName: string
+  date:            string   // ISO
+  items:           InvoiceItem[]
+  totalPrice:      number
+  totalDuration:   number   // minutes — suma svih usluga
+  status:          'SENT' | 'PENDING'
+  createdAt:       string
+}
 
 export interface Appointment {
-  id: number
-  clientId: number
-  clientName: string
-  clientPhone?: string
-  hairdresserId: number
+  id:              number
+  clientId:        number
+  clientName:      string
+  clientPhone?:    string
+  hairdresserId:   number
   hairdresserName: string
   hairdresserPhoto?: string
-  serviceId: number
-  serviceName: string
-  salonId: number
-  salonName: string
-  salonAddress: string
-  startTime: string  // ISO datetime
-  endTime: string
-  status: AppointmentStatus
-  price: number
-  notes?: string
-  createdAt: string
+  services:        AppointmentService[]
+  serviceId:       number   // primary service (first) — legacy compat
+  serviceName:     string   // primary service name  — legacy compat
+  salonId:         number
+  salonName:       string
+  salonAddress:    string
+  startTime:       string   // ISO datetime
+  endTime:         string   // startTime + sum(durations)
+  status:          AppointmentStatus
+  price:           number   // total = sum(service.price)
+  notes?:          string
+  invoice?:        Invoice
+  createdAt:       string
 }
+
 
  
 export interface CreateAppointmentRequest {
   hairdresserId: number
-  serviceId: number
+  serviceIds: number[]
   startTime: string
   notes?: string
 }
@@ -46,7 +76,15 @@ export interface TimeSlot {
 export interface AvailabilityResponse {
   date: string
   hairdresserId: number
+  totalDuration: number
   slots: TimeSlot[]
+}
+
+export interface SelectedService{
+  id:       number
+  name:     string
+  price:    number
+  duration: number 
 }
 
 
@@ -55,9 +93,17 @@ export interface BookingWizardState {
   salonId?: number
   salonName?: string
   selectedHairdresser?: { id: number; name: string; photo?: string }
-  selectedService?: { id: number; name: string; price: number; duration: number }
+  selectedService?: SelectedService[]
   selectedDate?: string   // "2026-03-20"
   selectedTime?: string   // "14:30"
   notes?: string
 }
  
+
+export function totalPrice(services: SelectedService[]): number {
+  return services.reduce((sum, s) => sum + s.price, 0)
+}
+ 
+export function totalDuration(services: SelectedService[]): number {
+  return services.reduce((sum, s) => sum + s.duration, 0)
+}
