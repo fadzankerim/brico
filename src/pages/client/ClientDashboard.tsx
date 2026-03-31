@@ -134,7 +134,7 @@ export default function ClientDashboard() {
             {favorites.slice(0, 5).map((fav) => (
               <Link
                 key={fav.id}
-                to={`/salons/${fav.salonId}`}
+                to={`/salons/${fav.salon.slug}`}
                 className="shrink-0 w-36 p-3 rounded-xl bg-[#0F1623] border border-white/5 hover:border-white/10 transition-colors"
               >
                 <div className="w-full h-20 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 mb-2 flex items-center justify-center">

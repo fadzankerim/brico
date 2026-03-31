@@ -15,7 +15,6 @@ import type { Hairdresser, Salon, Service, WorkingHours } from '../types/salon.t
 import type { Appointment } from '../types/booking.types'
 import type { Favorite, Review } from '../types/review.types'
 
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function iso(date: Date) {
   return date.toISOString()
@@ -312,6 +311,7 @@ const A = (
   clientName,
   hairdresserId,
   hairdresserName,
+  services: [{ serviceId, serviceName, price, durationMinutes }],
   serviceId,
   serviceName,
   salonId,
@@ -365,17 +365,17 @@ export const MOCK_REVIEWS: Review[] = [
 export const MOCK_FAVORITES: Favorite[] = [
   {
     id: 1, userId: 5, salonId: 1,
-    salon: { id: 1, name: 'Elite Cut', city: 'Sarajevo', avgRating: 4.9, verified: true },
+    salon: { id: 1, name: 'Elite Cut', slug: 'elite-cut-sarajevo', city: 'Sarajevo', avgRating: 4.9, verified: true },
     createdAt: pastIso(30, 10),
   },
   {
     id: 2, userId: 5, salonId: 2,
-    salon: { id: 2, name: 'Barber King', city: 'Mostar', avgRating: 4.7, verified: true },
+    salon: { id: 2, name: 'Barber King', slug: 'barber-king-mostar', city: 'Mostar', avgRating: 4.7, verified: true },
     createdAt: pastIso(25, 10),
   },
   {
     id: 3, userId: 6, salonId: 1,
-    salon: { id: 1, name: 'Elite Cut', city: 'Sarajevo', avgRating: 4.9, verified: true },
+    salon: { id: 1, name: 'Elite Cut', slug: 'elite-cut-sarajevo', city: 'Sarajevo', avgRating: 4.9, verified: true },
     createdAt: pastIso(10, 10),
   },
 ]
@@ -385,26 +385,43 @@ export const MOCK_FAVORITES: Favorite[] = [
  * Dinamički generiše slobodne termine za frizera na određeni datum.
  * Uzima u obzir postojeće termine i vraća listu dostupnih slotova.
  */
-export function generateAvailability(hairdresserId: number, date: string) {
+export function generateAvailability(
+  hairdresserId: number,
+  date: string,
+  totalDuration = 30,   // minutes — sum of all selected services
+) {
   const allSlots = [
     '09:00','09:30','10:00','10:30','11:00','11:30',
     '12:00','12:30','13:00','13:30','14:00','14:30',
     '15:00','15:30','16:00','16:30','17:00','17:30',
   ]
 
-  // Termini za tog frizera na taj dan
-  const taken = MOCK_APPOINTMENTS
+  // Busy windows for this hairdresser on this date
+  const busyWindows = MOCK_APPOINTMENTS
     .filter(a =>
       a.hairdresserId === hairdresserId &&
       a.startTime.startsWith(date) &&
       a.status !== 'CANCELLED'
     )
-    .map(a => format(new Date(a.startTime), 'HH:mm'))
+    .map(a => ({
+      start: new Date(a.startTime).getTime(),
+      end:   new Date(a.endTime).getTime(),
+    }))
 
-  return allSlots.map(time => ({
-    time,
-    available: !taken.includes(time),
-  }))
+  return allSlots.map(time => {
+    const [h, m]   = time.split(':').map(Number)
+    const slotStart = new Date(`${date}T${time}:00`).getTime()
+    const slotEnd   = slotStart + totalDuration * 60_000
+
+    // Slot end must be before closing time (18:00)
+    const closingTime = new Date(`${date}T18:00:00`).getTime()
+    if (slotEnd > closingTime) return { time, available: false }
+
+    // Check no busy window overlaps with [slotStart, slotEnd)
+    const overlaps = busyWindows.some(w => slotStart < w.end && slotEnd > w.start)
+
+    return { time, available: !overlaps }
+  })
 }
 
 // ─── SALON SEARCH HELPER ─────────────────────────────────────────────────────

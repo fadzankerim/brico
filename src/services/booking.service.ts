@@ -20,10 +20,10 @@ export const bookingService = {
   getSalonAppointments: (salonId: number, params?: { from?: string; to?: string }) =>
     api.get<Appointment[]>(`/salons/${salonId}/appointments`, { params }).then((r) => r.data),
 
-  getAvailability: (hairdresserId: number, date: string) =>
+  getAvailability: (hairdresserId: number, date: string, totalDuration: number) =>
     api
       .get<AvailabilityResponse>(`/hairdressers/${hairdresserId}/availability`, {
-        params: { date },
+        params: { date, duration: totalDuration },
       })
       .then((r) => r.data),
 }

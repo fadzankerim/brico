@@ -93,7 +93,7 @@ export interface BookingWizardState {
   salonId?: number
   salonName?: string
   selectedHairdresser?: { id: number; name: string; photo?: string }
-  selectedService?: SelectedService[]
+  selectedServices: SelectedService[]
   selectedDate?: string   // "2026-03-20"
   selectedTime?: string   // "14:30"
   notes?: string

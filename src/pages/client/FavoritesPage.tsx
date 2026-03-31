@@ -39,7 +39,7 @@ export default function FavoritesPage(){
           {favorites.map((fav, i) => (
             <motion.div key={fav.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <div className="rounded-2xl bg-[#0F1623] border border-white/5 overflow-hidden hover:border-white/10 transition-all group">
-                <Link to={`/salons/${fav.salonId}`} className="block">
+                <Link to={`/salons/${fav.salon.slug}`} className="block">
                   <div className="h-40 bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center">
                     <Scissors className="w-10 h-10 text-slate-600 group-hover:text-slate-500 transition-colors" />
                   </div>
@@ -52,7 +52,7 @@ export default function FavoritesPage(){
                   </div>
                 </Link>
                 <div className="px-4 pb-4 flex gap-2">
-                  <Link to={`/salons/${fav.salonId}`} className="flex-1 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center hover:bg-rose-500 hover:text-white transition-all">
+                  <Link to={`/book/${fav.salonId}`} className="flex-1 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center hover:bg-rose-500 hover:text-white transition-all">
                     Rezerviši
                   </Link>
                   <button

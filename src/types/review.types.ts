@@ -28,6 +28,7 @@ export interface Favorite {
   salon: {
     id: number
     name: string
+    slug: string
     city: string
     avgRating: number
     primaryPhoto?: string

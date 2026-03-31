@@ -31,8 +31,8 @@ import {
 } from './db'
 import type { Hairdresser, Salon, Service } from '../types/salon.typs'
 import type { User } from '../types/user.types'
-import type { Appointment } from '../types/booking.types'
 import type { Favorite, Review } from '../types/review.types'
+import type { Appointment } from '../types/booking.types'
 
 
 // ─── In-memory mutable store ──────────────────────────────────────────────────
@@ -226,10 +226,10 @@ route('post', /^\/salons$/, async (_, config) => {
   const newS: Salon = {
     id:          nextSalonId++,
     slug:        body.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now(),
-    name:        body.name,
-    city:        body.city,
-    address:     body.address,
     ...body,
+    name: body.name,
+    city: body.city,
+    address: body.address,
     avgRating:   0,
     reviewCount: 0,
     verified:    false,
@@ -309,9 +309,11 @@ route('delete', /^\/salons\/(\d+)\/hairdressers\/(\d+)$/, async (_, __, match) =
 
 route('get', /^\/hairdressers\/(\d+)\/availability$/, async (_, config, match) => {
   await delay(80)
-  const hairdresserId = Number(match[1])
-  const date = (config.params as any)?.date ?? format(new Date(), 'yyyy-MM-dd')
-  return ok({ date, hairdresserId, slots: generateAvailability(hairdresserId, date) })
+  const hairdresserId  = Number(match[1])
+  const params         = (config.params as any) ?? {}
+  const date           = params.date ?? format(new Date(), 'yyyy-MM-dd')
+  const totalDuration  = Number(params.duration ?? 30)
+  return ok({ date, hairdresserId, totalDuration, slots: generateAvailability(hairdresserId, date, totalDuration) })
 })
 
 // ─── SERVICES ─────────────────────────────────────────────────────────────────
@@ -384,14 +386,53 @@ route('post', /^\/appointments$/, async (_, config) => {
   if (!uid) err('Unauthorized', 401)
   const body = parseBody(config)
 
-  const hairdresser = hairdressers.find(h => h.id === body.hairdresserId)
-  const service     = services.find(s => s.id === body.serviceId)
-  const client      = users.find(u => u.id === uid)
-  const salon       = salons.find(s => s.id === hairdresser?.salonId)
-  if (!hairdresser || !service || !client || !salon) err('Neispravni podaci', 400)
+  // Support both single serviceId (legacy) and serviceIds array (multi-service)
+  const serviceIdList: number[] = body.serviceIds?.length
+    ? body.serviceIds
+    : body.serviceId ? [body.serviceId] : []
+
+  if (!serviceIdList.length) err('Minimalno jedna usluga je obavezna', 400)
+
+  const hairdresser   = hairdressers.find(h => h.id === body.hairdresserId)
+  const selectedSvcs  = serviceIdList.map((id: number) => services.find(s => s.id === id)).filter(Boolean) as typeof services
+  const client        = users.find(u => u.id === uid)
+  const salon         = salons.find(s => s.id === hairdresser?.salonId)
+  if (!hairdresser || !selectedSvcs.length || !client || !salon) err('Neispravni podaci', 400)
+
+  // Total price and duration = sum of all services
+  const totalPrice    = selectedSvcs.reduce((sum, s) => sum + s.price, 0)
+  const totalDuration = selectedSvcs.reduce((sum, s) => sum + s.durationMinutes, 0)
 
   const endDate = new Date(body.startTime)
-  endDate.setMinutes(endDate.getMinutes() + service!.durationMinutes)
+  endDate.setMinutes(endDate.getMinutes() + totalDuration)
+
+  // Build AppointmentService list
+  const apptServices = selectedSvcs.map(s => ({
+    serviceId:       s.id,
+    serviceName:     s.name,
+    price:           s.price,
+    durationMinutes: s.durationMinutes,
+  }))
+
+  // Generate invoice number
+  const today     = format(new Date(), 'yyyyMMdd')
+  const invoiceNo = `HB-${today}-${String(nextAppointmentId).padStart(4, '0')}`
+
+  const invoice = {
+    invoiceNumber:   invoiceNo,
+    appointmentId:   nextAppointmentId,
+    clientName:      client!.fullName,
+    clientEmail:     client!.email,
+    salonName:       salon!.name,
+    salonAddress:    salon!.address,
+    hairdresserName: hairdresser!.fullName,
+    date:            body.startTime,
+    items:           apptServices.map(s => ({ name: s.serviceName, price: s.price, duration: s.durationMinutes })),
+    totalPrice,
+    totalDuration,
+    status:          'SENT',
+    createdAt:       new Date().toISOString(),
+  }
 
   const newA: Appointment = {
     id:              nextAppointmentId++,
@@ -400,19 +441,30 @@ route('post', /^\/appointments$/, async (_, config) => {
     clientPhone:     client!.phone,
     hairdresserId:   hairdresser!.id,
     hairdresserName: hairdresser!.fullName,
-    serviceId:       service!.id,
-    serviceName:     service!.name,
+    // Primary service (first) for backwards compatibility
+    serviceId:       selectedSvcs[0].id,
+    serviceName:     selectedSvcs[0].name,
+    // Full multi-service list
+    services:        apptServices,
     salonId:         salon!.id,
     salonName:       salon!.name,
     salonAddress:    salon!.address,
     startTime:       body.startTime,
     endTime:         endDate.toISOString(),
     status:          'PENDING',
-    price:           service!.price,
+    price:           totalPrice,
     notes:           body.notes,
+    invoice,
     createdAt:       new Date().toISOString(),
-  }
+  } as Appointment
   appointments.push(newA)
+
+  // Simulate email send (console log in mock)
+  console.info(
+    `%c[HairBook Mock] 📧 Račun ${invoiceNo} "poslan" na ${client!.email} — ${selectedSvcs.length} usluga, ukupno €${totalPrice}`,
+    'color: #3B82F6; font-weight: bold'
+  )
+
   return ok(newA, 201)
 })
 
@@ -501,7 +553,7 @@ route('post', /^\/favorites$/, async (_, config) => {
     id:        nextFavoriteId++,
     userId:    uid!,
     salonId,
-    salon:     { id: salon!.id, name: salon!.name, city: salon!.city, avgRating: salon!.avgRating, verified: salon!.verified },
+    salon:     { id: salon!.id, name: salon!.name, slug: salon!.slug, city: salon!.city, avgRating: salon!.avgRating, verified: salon!.verified },
     createdAt: new Date().toISOString(),
   }
   favorites.push(newF)

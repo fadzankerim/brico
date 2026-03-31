@@ -9,8 +9,8 @@ export const appointmentKeys = {
   all: ['appointments'] as const,
   mine: () => ['appointments', 'mine'] as const,
   detail: (id: number) => ['appointments', id] as const,
-  availability: (hairdresserId: number, date: string) =>
-    ['availability', hairdresserId, date] as const,
+  availability: (hid: number, date: string, dur: number) =>
+                  ['availability', hid, date, dur]                    as const,
   salonAll: (salonId: number) => ['appointments', 'salon', salonId] as const,
 }
 
@@ -22,11 +22,11 @@ export function useMyAppointments() {
   })
 }
 
-export function useAvailability(hairdresserId: number | undefined, date: string | undefined) {
+export function useAvailability(hairdresserId: number | undefined, date: string | undefined, totalDuration: number ) {
   return useQuery({
-    queryKey: appointmentKeys.availability(hairdresserId!, date!),
-    queryFn: () => bookingService.getAvailability(hairdresserId!, date!),
-    enabled: !!hairdresserId && !!date,
+    queryKey: appointmentKeys.availability(hairdresserId!, date!, totalDuration),
+    queryFn: () => bookingService.getAvailability(hairdresserId!, date!, totalDuration),
+    enabled: !!hairdresserId && !!date && totalDuration > 0,
     staleTime: 30_000, // 30s — availability changes fast
   })
 }
