@@ -7,7 +7,7 @@ import StatCard from "../../components/StatCard";
 import { Calendar, Clock, Scissors, Star } from "lucide-react";
 import EmptyState from "../../components/EmptyState";
 import AppointmentCard from "../../components/AppointmentCard";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {motion} from "motion/react"
 
 
@@ -17,7 +17,7 @@ export default function ClientDashboard() {
 
     const { user } = useAuthStore();
     const [filter, setFilter] = useState<Filter>('upcoming')
-
+    const [searchParams] = useSearchParams()
     const { data: appointments = [], isLoading } = useMyAppointments();
     const { data: favorites = [] } = useFavorites();
 
