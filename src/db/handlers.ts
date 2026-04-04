@@ -205,6 +205,16 @@ route('get', /^\/salons$/, async (_, config) => {
   }))
 })
 
+// Return all salons belonging to a specific owner
+route('get', /^\/salons\/owner\/(\d+)$/, async (_, __, match) => {
+  await delay(80)
+  const ownerId = Number(match[1])
+  const ownerSalons = salons
+    .filter(s => (s as any).ownerId === ownerId && s.isActive)
+    .map(s => salonWithRelations(s.id)!)
+  return ok(ownerSalons)
+})
+
 route('get', /^\/salons\/slug\/(.+)$/, async (_, __, match) => {
   await delay()
   const s = salons.find(s => s.slug === match[1])
@@ -252,6 +262,44 @@ route('put', /^\/salons\/(\d+)$/, async (_, config, match) => {
 route('delete', /^\/salons\/(\d+)$/, async (_, __, match) => {
   await delay()
   salons = salons.map(s => s.id === Number(match[1]) ? { ...s, isActive: false } : s)
+  return ok({})
+})
+
+// ─── SALON PHOTOS ─────────────────────────────────────────────────────────────
+
+let nextPhotoId = 20
+
+route('post', /^\/salons\/(\d+)\/photos$/, async (_, config, match) => {
+  await delay()
+  const salonId = Number(match[1])
+  const idx = salons.findIndex(s => s.id === salonId)
+  if (idx === -1) err('Salon nije pronađen', 404)
+  const { url, isPrimary = false } = parseBody(config)
+  const photo = { id: nextPhotoId++, url, isPrimary: false }
+  if (isPrimary) {
+    salons[idx].photos = salons[idx].photos.map(p => ({ ...p, isPrimary: false }))
+  }
+  salons[idx].photos = [...salons[idx].photos, { ...photo, isPrimary }]
+  return ok(photo, 201)
+})
+
+route('patch', /^\/salons\/(\d+)\/photos\/(\d+)\/primary$/, async (_, __, match) => {
+  await delay()
+  const salonId = Number(match[1])
+  const photoId = Number(match[2])
+  const idx = salons.findIndex(s => s.id === salonId)
+  if (idx === -1) err('Salon nije pronađen', 404)
+  salons[idx].photos = salons[idx].photos.map(p => ({ ...p, isPrimary: p.id === photoId }))
+  return ok({})
+})
+
+route('delete', /^\/salons\/(\d+)\/photos\/(\d+)$/, async (_, __, match) => {
+  await delay()
+  const salonId = Number(match[1])
+  const photoId = Number(match[2])
+  const idx = salons.findIndex(s => s.id === salonId)
+  if (idx === -1) err('Salon nije pronađen', 404)
+  salons[idx].photos = salons[idx].photos.filter(p => p.id !== photoId)
   return ok({})
 })
 

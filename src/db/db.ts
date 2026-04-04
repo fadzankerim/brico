@@ -137,6 +137,7 @@ export const MOCK_SALONS: Salon[] = [
     reviewCount: 213,
     verified: true,
     isActive: true,
+    ownerId: 1,
     photos: [
       { id: 1, url: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800', isPrimary: true  },
       { id: 2, url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=400', isPrimary: false },

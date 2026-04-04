@@ -73,6 +73,7 @@ export interface Salon {
   reviewCount: number
   verified: boolean
   isActive: boolean
+  ownerId?: number
   photos: SalonPhoto[]
   hairdressers?: Hairdresser[]
   services?: Service[]

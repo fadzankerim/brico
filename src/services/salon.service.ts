@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { SalonSearchParams, SalonSearchResponse, Salon, Hairdresser, Service } from '../types/salon.typs'
+import type { SalonSearchParams, SalonSearchResponse, Salon, Hairdresser, Service, SalonPhoto } from '../types/salon.typs'
 
 export const salonService = {
   search: (params: SalonSearchParams) =>
@@ -11,7 +11,10 @@ export const salonService = {
   getBySlug: (slug: string) =>
     api.get<Salon>(`/salons/slug/${slug}`).then((r) => r.data),
 
-  create: (data: Partial<Salon>) =>
+  getByOwner: (ownerId: number) =>
+    api.get<Salon[]>(`/salons/owner/${ownerId}`).then((r) => r.data),
+
+  create: (data: Partial<Salon> & { ownerId?: number }) =>
     api.post<Salon>('/salons', data).then((r) => r.data),
 
   update: (id: number, data: Partial<Salon>) =>
@@ -19,6 +22,16 @@ export const salonService = {
 
   delete: (id: number) =>
     api.delete(`/salons/${id}`),
+
+  // Photos
+  addPhoto: (salonId: number, url: string, isPrimary = false) =>
+    api.post<SalonPhoto>(`/salons/${salonId}/photos`, { url, isPrimary }).then((r) => r.data),
+
+  setPrimaryPhoto: (salonId: number, photoId: number) =>
+    api.patch(`/salons/${salonId}/photos/${photoId}/primary`),
+
+  deletePhoto: (salonId: number, photoId: number) =>
+    api.delete(`/salons/${salonId}/photos/${photoId}`),
 
   // Hairdressers
   getHairdressers: (salonId: number) =>

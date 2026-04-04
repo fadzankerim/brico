@@ -9,6 +9,7 @@ export const salonKeys = {
   all: ['salons'] as const,
   search: (params: SalonSearchParams) => ['salons', 'search', params] as const,
   detail: (id: number | string) => ['salons', 'detail', id] as const,
+  mine: (ownerId: number | undefined) => ['salons', 'mine', ownerId] as const,
   favorites: () => ['salons', 'favorites'] as const,
 }
 
@@ -36,6 +37,17 @@ export function useSalonById(id: number | string | undefined) {
     queryFn:  () => salonService.getById(numId),
     staleTime: 1000 * 60 * 5,
     enabled:  !!id && !isNaN(numId),
+  })
+}
+
+/** Returns the first salon owned by the currently logged-in SALON_OWNER. */
+export function useMySalon() {
+  const { user } = useAuthStore()
+  return useQuery({
+    queryKey: salonKeys.mine(user?.id),
+    queryFn:  () => salonService.getByOwner(user!.id).then(salons => salons[0] ?? null),
+    enabled:  !!user && user.role === 'SALON_OWNER',
+    staleTime: 1000 * 60 * 5,
   })
 }
 

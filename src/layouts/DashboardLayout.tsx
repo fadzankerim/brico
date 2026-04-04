@@ -15,12 +15,13 @@ type NavItem = { label: string; href: string; icon: React.ElementType; tab?: str
 
 // Owner nav — all point to /owner/dashboard with ?tab= param
 const OWNER_NAV: NavItem[] = [
-  { label: 'Pregled',   href: '/owner/dashboard?tab=overview',   icon: LayoutDashboard },
-  { label: 'Kalendar',  href: '/owner/dashboard?tab=calendar',   icon: CalendarDays    },
-  { label: 'Osoblje',   href: '/owner/dashboard?tab=staff',      icon: Users           },
-  { label: 'Usluge',    href: '/owner/dashboard?tab=services',   icon: Sparkles        },
-  { label: 'Analytics', href: '/owner/dashboard?tab=analytics',  icon: BarChart3       },
-  { label: 'Postavke',  href: '/owner/dashboard?tab=settings',   icon: Settings        },
+  { label: 'Pregled',     href: '/owner/dashboard?tab=overview',   icon: LayoutDashboard },
+  { label: 'Kalendar',   href: '/owner/dashboard?tab=calendar',   icon: CalendarDays    },
+  { label: 'Osoblje',    href: '/owner/dashboard?tab=staff',      icon: Users           },
+  { label: 'Usluge',     href: '/owner/dashboard?tab=services',   icon: Sparkles        },
+  { label: 'Fotografije', href: '/owner/dashboard?tab=photos',    icon: Building2       },
+  { label: 'Analytics',  href: '/owner/dashboard?tab=analytics',  icon: BarChart3       },
+  { label: 'Postavke',   href: '/owner/dashboard?tab=settings',   icon: Settings        },
 ]
 
 const HAIRDRESSER_NAV: NavItem[] = [
