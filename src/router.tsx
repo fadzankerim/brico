@@ -17,6 +17,7 @@ const BookingPage           = lazy(() => import('./pages/client/BookingPage'))
 const FavoritesPage         = lazy(() => import('./pages/client/FavoritesPage'))
 const HairdresserDashboard  = lazy(() => import('./pages/hairdresser/HairdresserDashboard'))
 const OwnerDashboard        = lazy(() => import('./pages/owner/OwnerDashboard'))
+const SuperAdminDashboard   = lazy(() => import('./pages/admin/SuperAdminDashboard'))
 
 // ─── Fallback while lazy loading ─────────────────────────────────────────────
 function PageLoader() {
@@ -95,6 +96,19 @@ export const router = createBrowserRouter([
         element: <DashboardLayout />,
         children: [
           { path: 'owner/dashboard', element: <S><OwnerDashboard /></S> },
+        ],
+      },
+    ],
+  },
+
+  // ── Admin routes ───────────────────────────────────────────────────────────
+  {
+    element: <ProtectedRoute roles={['ADMIN']} />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          { path: 'admin/dashboard', element: <S><SuperAdminDashboard /></S> },
         ],
       },
     ],

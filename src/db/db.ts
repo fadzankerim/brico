@@ -98,6 +98,15 @@ export const MOCK_USERS: User[] = [
     emailVerified: true,
     createdAt: '2025-08-20T10:00:00Z',
   },
+  {
+    id: 8,
+    email: 'admin@brico.ba',
+    fullName: 'Super Admin',
+    phone: '+387 61 000 001',
+    role: 'ADMIN',
+    emailVerified: true,
+    createdAt: '2025-01-01T00:00:00Z',
+  },
 ]
 
 // ─── WORKING HOURS ──────────────────────────────────────────────────────────

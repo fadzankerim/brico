@@ -3,7 +3,7 @@ import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Scissors, LayoutDashboard, CalendarDays, Users, Sparkles,
-  BarChart3, Settings, Heart, Menu, Bell, LogOut,
+  BarChart3, Settings, Heart, Menu, Bell, LogOut, Crown, Building2,
 } from 'lucide-react'
 
 import { useLogout } from '../hooks/useAuth'
@@ -36,6 +36,14 @@ const CLIENT_NAV: NavItem[] = [
   { label: 'Postavke', href: '/settings',   icon: Settings     },
 ]
 
+const ADMIN_NAV: NavItem[] = [
+  { label: 'Pregled',    href: '/admin/dashboard?tab=overview',   icon: LayoutDashboard },
+  { label: 'Planovi',    href: '/admin/dashboard?tab=plans',      icon: Crown           },
+  { label: 'Saloni',     href: '/admin/dashboard?tab=salons',     icon: Building2       },
+  { label: 'Korisnici',  href: '/admin/dashboard?tab=users',      icon: Users           },
+  { label: 'Analitika',  href: '/admin/dashboard?tab=analytics',  icon: BarChart3       },
+]
+
 export default function DashboardLayout() {
   const { user }   = useAuthStore()
   const logout     = useLogout()
@@ -43,13 +51,15 @@ export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const navItems =
-    user?.role === 'SALON_OWNER'  ? OWNER_NAV       :
-    user?.role === 'HAIRDRESSER'  ? HAIRDRESSER_NAV :
+    user?.role === 'ADMIN'        ? ADMIN_NAV        :
+    user?.role === 'SALON_OWNER'  ? OWNER_NAV        :
+    user?.role === 'HAIRDRESSER'  ? HAIRDRESSER_NAV  :
     CLIENT_NAV
 
   const roleLabel =
+    user?.role === 'ADMIN'       ? 'Super Admin'    :
     user?.role === 'SALON_OWNER' ? 'Vlasnik Salona' :
-    user?.role === 'HAIRDRESSER' ? 'Frizer'          : 'Klijent'
+    user?.role === 'HAIRDRESSER' ? 'Frizer'         : 'Klijent'
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()

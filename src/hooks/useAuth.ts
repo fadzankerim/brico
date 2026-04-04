@@ -17,6 +17,7 @@ export function useLogin() {
 
       // Role-based redirect
       switch (res.user.role) {
+        case 'ADMIN':        navigate('/admin/dashboard'); break
         case 'SALON_OWNER':  navigate('/owner/dashboard'); break
         case 'HAIRDRESSER':  navigate('/hairdresser/dashboard'); break
         default:             navigate('/')
