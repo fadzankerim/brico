@@ -44,11 +44,13 @@ public class Salon {
     private String address;
 
     @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
-    @Column(precision = 10, scale = 7)
+    //@Column(precision = 10, scale = 7)
+    @Column()
     private Double latitude;
 
     @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
-    @Column(precision = 10, scale = 7)
+    //@Column(precision = 10, scale = 7)
+    @Column()
     private Double longitude;
 
     @Column(length = 20)
