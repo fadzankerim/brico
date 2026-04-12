@@ -9,11 +9,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,6 +36,38 @@ public class UserController {
                 ? userService.findByRole(role)
                 : userService.findAll();
         return ResponseEntity.ok(users);
+    }
+
+    // ── Paginacija + sortiranje ────────────────────────────────────────
+
+    @GetMapping("/paged")
+    @Operation(summary = "Dohvati korisnike sa paginacijom",
+               description = "Podržava ?page=0&size=10&sort=createdAt,desc i filtriranje po roli")
+    public ResponseEntity<Page<UserResponse>> getAllPaged(
+            @RequestParam(required = false) UserRole role,
+            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<UserResponse> page = (role != null)
+                ? userService.findByRolePaged(role, pageable)
+                : userService.findAllPaged(pageable);
+        return ResponseEntity.ok(page);
+    }
+
+    // ── Custom pretraga ────────────────────────────────────────────────
+
+    @GetMapping("/search")
+    @Operation(summary = "Pretraži korisnike po imenu ili emailu")
+    public ResponseEntity<Page<UserResponse>> search(
+            @RequestParam String q,
+            @PageableDefault(size = 10, sort = "fullName") Pageable pageable) {
+        return ResponseEntity.ok(userService.search(q, pageable));
+    }
+
+    // ── Statistika ────────────────────────────────────────────────────
+
+    @GetMapping("/stats")
+    @Operation(summary = "Broj korisnika po roli")
+    public ResponseEntity<Map<String, Long>> getStats() {
+        return ResponseEntity.ok(userService.getStats());
     }
 
     @GetMapping("/{id}")
@@ -52,7 +89,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}")
-    @Operation(summary = "Ažuriraj podatke korisnika")
+    @Operation(summary = "Ažuriraj podatke korisnika (parcijalni update)")
     public ResponseEntity<UserResponse> update(@PathVariable Long id,
                                                @Valid @RequestBody UpdateUserRequest req) {
         return ResponseEntity.ok(userService.update(id, req));

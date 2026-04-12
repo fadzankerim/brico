@@ -10,10 +10,14 @@ import ba.unsa.etf.nwt.userservice.model.UserRole;
 import ba.unsa.etf.nwt.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,34 @@ public class UserService {
         return userRepository.findByRole(role).stream()
                 .map(u -> modelMapper.map(u, UserResponse.class))
                 .toList();
+    }
+
+    // ── Paginacija + sortiranje ────────────────────────────────────────
+
+    public Page<UserResponse> findAllPaged(Pageable pageable) {
+        return userRepository.findAll(pageable)
+                .map(u -> modelMapper.map(u, UserResponse.class));
+    }
+
+    public Page<UserResponse> findByRolePaged(UserRole role, Pageable pageable) {
+        return userRepository.findByRole(role, pageable)
+                .map(u -> modelMapper.map(u, UserResponse.class));
+    }
+
+    // ── Custom JPQL pretraga ──────────────────────────────────────────
+
+    public Page<UserResponse> search(String q, Pageable pageable) {
+        return userRepository.searchByNameOrEmail(q, pageable)
+                .map(u -> modelMapper.map(u, UserResponse.class));
+    }
+
+    // ── Statistika ────────────────────────────────────────────────────
+
+    public Map<String, Long> getStats() {
+        Map<String, Long> stats = new LinkedHashMap<>();
+        userRepository.countByRole().forEach(row ->
+                stats.put(row[0].toString(), (Long) row[1]));
+        return stats;
     }
 
     public UserResponse findById(Long id) {
@@ -59,8 +91,8 @@ public class UserService {
     @Transactional
     public UserResponse update(Long id, UpdateUserRequest req) {
         User user = getOrThrow(id);
-        if (req.getFullName()    != null) user.setFullName(req.getFullName());
-        if (req.getPhone()       != null) user.setPhone(req.getPhone());
+        if (req.getFullName()     != null) user.setFullName(req.getFullName());
+        if (req.getPhone()        != null) user.setPhone(req.getPhone());
         if (req.getProfilePhoto() != null) user.setProfilePhoto(req.getProfilePhoto());
         return modelMapper.map(userRepository.save(user), UserResponse.class);
     }

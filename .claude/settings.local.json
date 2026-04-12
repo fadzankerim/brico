@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls brico-backend/*/src/main/resources/application.properties)",
+      "Bash(docker --version)",
+      "Bash(docker compose:*)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn test:*)",
+      "Bash(wait)",
+      "Bash(curl -s http://localhost:8091/actuator/health)",
+      "Bash(docker start:*)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist /FI \"PID eq 24796\")",
+      "Bash(Get-Process -Id 24796)",
+      "Bash(cmd.exe /c \"tasklist /FI \\\\\"PID eq 24796\\\\\" 2>nul\")",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :8761\")",
+      "Bash(curl -s http://localhost:8761/actuator/health)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

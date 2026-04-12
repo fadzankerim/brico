@@ -15,5 +15,7 @@ public class ReviewResponse {
     private Long appointmentId;
     private Integer rating;
     private String comment;
+    private String ownerReply;
+    private LocalDateTime ownerReplyAt;
     private LocalDateTime createdAt;
 }

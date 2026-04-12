@@ -8,11 +8,15 @@ import ba.unsa.etf.nwt.portfolioservice.repository.SalonSubscriptionRepository;
 import ba.unsa.etf.nwt.portfolioservice.repository.SubscriptionPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,12 @@ public class SubscriptionService {
                 .map(p -> modelMapper.map(p, PlanResponse.class)).toList();
     }
 
+    // Paginacija planova
+    public Page<PlanResponse> findAllPlansPaged(Pageable pageable) {
+        return planRepository.findByIsActive(true, pageable)
+                .map(p -> modelMapper.map(p, PlanResponse.class));
+    }
+
     public PlanResponse findPlanById(Long id) {
         return modelMapper.map(getPlanOrThrow(id), PlanResponse.class);
     }
@@ -41,10 +51,30 @@ public class SubscriptionService {
                 .map(this::toSubResponse).toList();
     }
 
+    // Paginacija sa @EntityGraph (eager load plan-a)
+    public Page<SubscriptionResponse> findAllSubscriptionsPaged(Pageable pageable) {
+        return subscriptionRepository.findAll(pageable).map(this::toSubResponse);
+    }
+
+    // @EntityGraph — dohvati pretplatu sa planom u jednom upitu
     public SubscriptionResponse findBySalonId(Long salonId) {
-        SalonSubscription sub = subscriptionRepository.findBySalonId(salonId)
+        SalonSubscription sub = subscriptionRepository.findWithPlanBySalonId(salonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pretplata za salon ID=" + salonId + " nije pronađena"));
         return toSubResponse(sub);
+    }
+
+    // Statistika pretplata
+    public Map<String, Object> getSubscriptionStats() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        Map<String, Long> byStatus = new LinkedHashMap<>();
+        subscriptionRepository.countGroupByStatus()
+                .forEach(row -> byStatus.put(row[0].toString(), (Long) row[1]));
+        Map<String, Long> activeByPlan = new LinkedHashMap<>();
+        subscriptionRepository.countActiveGroupByPlanType()
+                .forEach(row -> activeByPlan.put(row[0].toString(), (Long) row[1]));
+        stats.put("byStatus", byStatus);
+        stats.put("activeByPlan", activeByPlan);
+        return stats;
     }
 
     @Transactional

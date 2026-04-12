@@ -9,9 +9,13 @@ import ba.unsa.etf.nwt.reviewservice.repository.FavoriteRepository;
 import ba.unsa.etf.nwt.reviewservice.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +44,35 @@ public class ReviewService {
         return modelMapper.map(getReviewOrThrow(id), ReviewResponse.class);
     }
 
+    // ── Paginacija ────────────────────────────────────────────────────
+
+    public Page<ReviewResponse> findBySalonIdPaged(Long salonId, Pageable pageable) {
+        return reviewRepository.findBySalonId(salonId, pageable)
+                .map(r -> modelMapper.map(r, ReviewResponse.class));
+    }
+
+    public Page<ReviewResponse> findByClientIdPaged(Long clientId, Pageable pageable) {
+        return reviewRepository.findByClientId(clientId, pageable)
+                .map(r -> modelMapper.map(r, ReviewResponse.class));
+    }
+
+    // ── Statistika distribucije ocjena ────────────────────────────────
+
+    public Map<String, Object> getSalonReviewStats(Long salonId) {
+        Double avg = reviewRepository.calculateAverageRatingBySalonId(salonId);
+        long total = reviewRepository.countBySalonId(salonId);
+        Map<Integer, Long> distribution = new LinkedHashMap<>();
+        for (int i = 1; i <= 5; i++) distribution.put(i, 0L);
+        reviewRepository.countBySalonIdGroupByRating(salonId)
+                .forEach(row -> distribution.put(((Number) row[0]).intValue(), (Long) row[1]));
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("salonId", salonId);
+        stats.put("totalReviews", total);
+        stats.put("averageRating", avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
+        stats.put("distribution", distribution);
+        return stats;
+    }
+
     public Map<String, Object> getSalonRating(Long salonId) {
         Double avg = reviewRepository.calculateAverageRatingBySalonId(salonId);
         long count = reviewRepository.countBySalonId(salonId);
@@ -57,7 +90,25 @@ public class ReviewService {
                 reviewRepository.existsByClientIdAndAppointmentId(req.getClientId(), req.getAppointmentId())) {
             throw new DuplicateResourceException("Recenzija za ovaj termin već postoji");
         }
-        Review review = modelMapper.map(req, Review.class);
+        Review review = Review.builder()
+                .salonId(req.getSalonId())
+                .hairdresserId(req.getHairdresserId())
+                .clientId(req.getClientId())
+                .clientName(req.getClientName())
+                .appointmentId(req.getAppointmentId())
+                .rating(req.getRating())
+                .comment(req.getComment())
+                .build();
+        return modelMapper.map(reviewRepository.save(review), ReviewResponse.class);
+    }
+
+    // ── PATCH — odgovor vlasnika ──────────────────────────────────────
+
+    @Transactional
+    public ReviewResponse addOwnerReply(Long id, OwnerReplyRequest req) {
+        Review review = getReviewOrThrow(id);
+        review.setOwnerReply(req.getReply());
+        review.setOwnerReplyAt(LocalDateTime.now());
         return modelMapper.map(reviewRepository.save(review), ReviewResponse.class);
     }
 

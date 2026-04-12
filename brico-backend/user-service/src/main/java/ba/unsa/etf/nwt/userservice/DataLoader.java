@@ -104,9 +104,12 @@ public class DataLoader implements CommandLineRunner {
                         .build()
         );
 
-        userRepository.saveAll(users);
+        long inserted = users.stream()
+                .filter(u -> !userRepository.existsByEmail(u.getEmail()))
+                .map(userRepository::save)
+                .count();
 
-        log.info("=== Kreirano {} korisnika ===", users.size());
+        log.info("=== Kreirano {} novih korisnika (preskočeno: {}) ===", inserted, users.size() - inserted);
         log.info("Admin nalog: admin@brico.ba");
         log.info("Vlasnici salona: {}", users.stream()
                 .filter(u -> u.getRole() == UserRole.SALON_OWNER)

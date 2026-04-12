@@ -11,10 +11,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -113,7 +118,7 @@ class AppointmentServiceTest {
         a.setStatus(AppointmentStatus.COMPLETED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(a));
 
-        assertThatThrownBy(() -> appointmentService.cancel(1L))
+        assertThatThrownBy(() -> appointmentService.cancel(1L, null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -125,5 +130,61 @@ class AppointmentServiceTest {
 
         AppointmentResponse resp = appointmentService.updateStatus(1L, AppointmentStatus.CONFIRMED);
         assertThat(resp.getStatus()).isEqualTo(AppointmentStatus.CONFIRMED);
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void findAllPaged_returnsPaginatedResults() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Appointment> page = new PageImpl<>(List.of(sampleAppointment()), pageable, 1);
+        when(appointmentRepository.findAll(pageable)).thenReturn(page);
+
+        Page<AppointmentResponse> result = appointmentService.findAllPaged(pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getSalonName()).isEqualTo("Elite Cut");
+    }
+
+    @Test
+    void reschedule_pendingAppointment_updatesTime() {
+        Appointment a = sampleAppointment();
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(a));
+        when(appointmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        LocalDateTime newStart = LocalDateTime.now().plusDays(3);
+        RescheduleRequest req = new RescheduleRequest();
+        req.setNewStartTime(newStart);
+
+        AppointmentResponse resp = appointmentService.reschedule(1L, req);
+        assertThat(resp.getStartTime()).isEqualTo(newStart);
+        assertThat(resp.getStatus()).isEqualTo(AppointmentStatus.PENDING);
+    }
+
+    @Test
+    void reschedule_cancelledAppointment_throwsIllegalState() {
+        Appointment a = sampleAppointment();
+        a.setStatus(AppointmentStatus.CANCELLED);
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(a));
+
+        RescheduleRequest req = new RescheduleRequest();
+        req.setNewStartTime(LocalDateTime.now().plusDays(3));
+
+        assertThatThrownBy(() -> appointmentService.reschedule(1L, req))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void getSalonStats_returnsCompleteMap() {
+        when(appointmentRepository.countBySalonId(1L)).thenReturn(10L);
+        when(appointmentRepository.countBySalonIdAndStatus(1L, AppointmentStatus.PENDING)).thenReturn(3L);
+        when(appointmentRepository.countBySalonIdAndStatus(1L, AppointmentStatus.CONFIRMED)).thenReturn(2L);
+        when(appointmentRepository.countBySalonIdAndStatus(1L, AppointmentStatus.COMPLETED)).thenReturn(4L);
+        when(appointmentRepository.countBySalonIdAndStatus(1L, AppointmentStatus.CANCELLED)).thenReturn(1L);
+        when(appointmentRepository.sumRevenueBySalon(1L)).thenReturn(new BigDecimal("150.00"));
+
+        Map<String, Object> stats = appointmentService.getSalonStats(1L);
+        assertThat(stats.get("total")).isEqualTo(10L);
+        assertThat(stats.get("completed")).isEqualTo(4L);
+        assertThat(((BigDecimal) stats.get("revenue"))).isEqualByComparingTo(new BigDecimal("150.00"));
     }
 }

@@ -15,6 +15,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -127,5 +131,51 @@ class SalonMgmtServiceTest {
         when(salonRepository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> salonMgmtService.findServicesBySalon(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void findAllPaged_returnsPaginatedSalons() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Salon salon = sampleSalon();
+        Page<Salon> page = new PageImpl<>(List.of(salon), pageable, 1);
+        when(salonRepository.findAll(pageable)).thenReturn(page);
+
+        Page<SalonResponse> result = salonMgmtService.findAllPaged(pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("Elite Cut");
+    }
+
+    @Test
+    void addServicesBatch_savesAllServices() {
+        Salon salon = sampleSalon();
+        when(salonRepository.findById(1L)).thenReturn(Optional.of(salon));
+
+        ServiceRequest r1 = new ServiceRequest();
+        r1.setName("Šišanje"); r1.setPrice(new BigDecimal("15.00")); r1.setDurationMinutes(30);
+        ServiceRequest r2 = new ServiceRequest();
+        r2.setName("Brijanje"); r2.setPrice(new BigDecimal("10.00")); r2.setDurationMinutes(20);
+
+        SalonService s1 = SalonService.builder().id(1L).name("Šišanje")
+                .price(new BigDecimal("15.00")).durationMinutes(30).salon(salon).isActive(true).build();
+        SalonService s2 = SalonService.builder().id(2L).name("Brijanje")
+                .price(new BigDecimal("10.00")).durationMinutes(20).salon(salon).isActive(true).build();
+        when(serviceRepository.saveAll(any())).thenReturn(List.of(s1, s2));
+
+        List<ServiceResponse> result = salonMgmtService.addServicesBatch(1L, List.of(r1, r2));
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getName()).isEqualTo("Šišanje");
+        assertThat(result.get(1).getName()).isEqualTo("Brijanje");
+    }
+
+    @Test
+    void searchByCityAndRating_returnsFilteredSalons() {
+        Salon salon = sampleSalon();
+        when(salonRepository.searchByCityAndRating("Sarajevo", 4.0)).thenReturn(List.of(salon));
+
+        List<SalonResponse> result = salonMgmtService.searchByCityAndRating("Sarajevo", 4.0);
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCity()).isEqualTo("Sarajevo");
     }
 }

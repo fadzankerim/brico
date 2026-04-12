@@ -9,10 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -136,5 +139,37 @@ class UserControllerTest {
                         .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fields.password").exists());
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void getAllPaged_returns200WithPageObject() throws Exception {
+        when(userService.findAllPaged(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleResponse())));
+
+        mockMvc.perform(get("/api/users/paged"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].email").value("test@brico.ba"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void search_returns200WithMatchingUsers() throws Exception {
+        when(userService.search(any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleResponse())));
+
+        mockMvc.perform(get("/api/users/search").param("q", "Test"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].fullName").value("Test Korisnik"));
+    }
+
+    @Test
+    void getStats_returns200WithMap() throws Exception {
+        when(userService.getStats()).thenReturn(Map.of("CLIENT", 5L, "OWNER", 2L));
+
+        mockMvc.perform(get("/api/users/stats"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.CLIENT").value(5));
     }
 }

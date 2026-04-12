@@ -15,8 +15,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -134,5 +139,39 @@ class UserServiceTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> userService.delete(99L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void findAllPaged_returnsPaginatedResults() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> page = new PageImpl<>(List.of(sampleUser()), pageable, 1);
+        when(userRepository.findAll(pageable)).thenReturn(page);
+
+        Page<UserResponse> result = userService.findAllPaged(pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getEmail()).isEqualTo("test@brico.ba");
+    }
+
+    @Test
+    void search_returnsMatchingUsers() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<User> page = new PageImpl<>(List.of(sampleUser()), pageable, 1);
+        when(userRepository.searchByNameOrEmail("Test", pageable)).thenReturn(page);
+
+        Page<UserResponse> result = userService.search("Test", pageable);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getFullName()).isEqualTo("Test Korisnik");
+    }
+
+    @Test
+    void getStats_returnsRoleCountMap() {
+        when(userRepository.countByRole()).thenReturn(
+                List.of(new Object[]{UserRole.CLIENT, 5L}, new Object[]{UserRole.SALON_OWNER, 2L})
+        );
+
+        Map<String, Long> stats = userService.getStats();
+        assertThat(stats).containsEntry("CLIENT", 5L).containsEntry("SALON_OWNER", 2L);
     }
 }
