@@ -8,8 +8,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "favorites",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "salon_id"}))
+@Table(
+    name = "favorites",
+    uniqueConstraints = @UniqueConstraint(name = "uq_favorites_user_salon", columnNames = {"user_id", "salon_id"}),
+    indexes = {
+        @Index(name = "idx_favorites_user",  columnList = "user_id"),
+        @Index(name = "idx_favorites_salon", columnList = "salon_id")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

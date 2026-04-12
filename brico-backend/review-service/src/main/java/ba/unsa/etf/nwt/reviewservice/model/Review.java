@@ -4,11 +4,21 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reviews")
+@Table(
+    name = "reviews",
+    indexes = {
+        @Index(name = "idx_reviews_salon",       columnList = "salon_id"),
+        @Index(name = "idx_reviews_client",      columnList = "client_id"),
+        @Index(name = "idx_reviews_hairdresser", columnList = "hairdresser_id"),
+        @Index(name = "idx_reviews_rating",      columnList = "salon_id,rating"),
+        @Index(name = "idx_reviews_appointment", columnList = "appointment_id")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,14 +44,12 @@ public class Review {
     @Column(name = "salon_id", nullable = false)
     private Long salonId;
 
-    // Opcionalno - recenzija može biti za specifičnog frizera
     @Column(name = "hairdresser_id")
     private Long hairdresserId;
 
     @Column(name = "hairdresser_name", length = 100)
     private String hairdresserName;
 
-    // Opcionalno - vezano za konkretan termin
     @Column(name = "appointment_id")
     private Long appointmentId;
 
@@ -55,7 +63,19 @@ public class Review {
     @Column(length = 500)
     private String comment;
 
+    // Vlasnik salona može odgovoriti na recenziju
+    @Size(max = 500)
+    @Column(name = "owner_reply", length = 500)
+    private String ownerReply;
+
+    @Column(name = "owner_reply_at")
+    private LocalDateTime ownerReplyAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

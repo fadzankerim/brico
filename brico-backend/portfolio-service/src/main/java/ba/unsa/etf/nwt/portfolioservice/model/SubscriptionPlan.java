@@ -12,7 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "subscription_plans")
+@Table(
+    name = "subscription_plans",
+    indexes = {
+        @Index(name = "idx_plan_type",   columnList = "plan_type"),
+        @Index(name = "idx_plan_active", columnList = "is_active")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,7 +46,6 @@ public class SubscriptionPlan {
     @Column(name = "price_km", nullable = false, precision = 10, scale = 2)
     private BigDecimal priceKm;
 
-    // null = neograničeno
     @Column(name = "max_hairdressers")
     private Integer maxHairdressers;
 
@@ -56,7 +61,6 @@ public class SubscriptionPlan {
     @Builder.Default
     private Boolean hasPrioritySupport = false;
 
-    // Stripe Price ID za automatsku naplatu
     @Column(name = "stripe_price_id", length = 60)
     private String stripePriceId;
 

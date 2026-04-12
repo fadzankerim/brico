@@ -4,12 +4,21 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "salon_subscriptions")
+@Table(
+    name = "salon_subscriptions",
+    uniqueConstraints = @UniqueConstraint(name = "uq_subscription_salon", columnNames = "salon_id"),
+    indexes = {
+        @Index(name = "idx_sub_salon",  columnList = "salon_id"),
+        @Index(name = "idx_sub_status", columnList = "status"),
+        @Index(name = "idx_sub_plan",   columnList = "plan_id")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,7 +29,6 @@ public class SalonSubscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Referenca na salon u salon-service
     @NotNull
     @Column(name = "salon_id", nullable = false, unique = true)
     private Long salonId;
@@ -42,14 +50,20 @@ public class SalonSubscription {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    // Stripe identifikatori za Financial Service
     @Column(name = "stripe_subscription_id", length = 60)
     private String stripeSubscriptionId;
 
     @Column(name = "stripe_customer_id", length = 60)
     private String stripeCustomerId;
 
+    @Column(name = "cancel_reason", length = 300)
+    private String cancelReason;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

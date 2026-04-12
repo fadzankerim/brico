@@ -4,11 +4,19 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "hairdressers")
+@Table(
+    name = "hairdressers",
+    indexes = {
+        @Index(name = "idx_hairdressers_salon",  columnList = "salon_id"),
+        @Index(name = "idx_hairdressers_user",   columnList = "user_id"),
+        @Index(name = "idx_hairdressers_active", columnList = "is_active")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,7 +27,6 @@ public class Hairdresser {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Referenca na korisnika u user-service
     @Column(name = "user_id")
     private Long userId;
 
@@ -32,7 +39,6 @@ public class Hairdresser {
     @Column(length = 300)
     private String bio;
 
-    // Specijalizacije (npr. "Bojenje,Šišanje,Pramenovi")
     @Column(length = 200)
     private String specialties;
 
@@ -43,6 +49,15 @@ public class Hairdresser {
     @Builder.Default
     private Boolean isActive = true;
 
+    // Cached prosječna ocjena (ažurira se kada se doda recenzija)
+    @Column(name = "avg_rating", nullable = false)
+    @Builder.Default
+    private Double avgRating = 0.0;
+
+    @Column(name = "total_appointments", nullable = false)
+    @Builder.Default
+    private Integer totalAppointments = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "salon_id", nullable = false)
     @ToString.Exclude
@@ -52,4 +67,8 @@ public class Hairdresser {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

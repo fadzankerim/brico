@@ -55,8 +55,8 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/cancel")
     @Operation(summary = "Otkaži termin")
-    public ResponseEntity<AppointmentResponse> cancel(@PathVariable Long id) {
-        appointmentService.cancel(id);
-        return ResponseEntity.ok(appointmentService.findById(id));
+    public ResponseEntity<AppointmentResponse> cancel(@PathVariable Long id,
+                                                      @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(appointmentService.cancel(id, reason));
     }
 }

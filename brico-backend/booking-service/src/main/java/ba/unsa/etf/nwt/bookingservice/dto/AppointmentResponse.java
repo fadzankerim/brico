@@ -22,6 +22,9 @@ public class AppointmentResponse {
     private AppointmentStatus status;
     private BigDecimal totalPrice;
     private String notes;
+    private String cancelReason;
+    private LocalDateTime cancelledAt;
     private List<AppointmentItemResponse> items;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

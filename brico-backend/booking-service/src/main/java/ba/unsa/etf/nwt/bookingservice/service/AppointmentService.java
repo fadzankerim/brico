@@ -92,13 +92,18 @@ public class AppointmentService {
     }
 
     @Transactional
-    public void cancel(Long id) {
+    public AppointmentResponse cancel(Long id, String reason) {
         Appointment appt = getOrThrow(id);
         if (appt.getStatus() == AppointmentStatus.COMPLETED) {
             throw new IllegalStateException("Završeni termini se ne mogu otkazati");
         }
+        if (appt.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Termin je već otkazan");
+        }
         appt.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appt);
+        appt.setCancelReason(reason);
+        appt.setCancelledAt(java.time.LocalDateTime.now());
+        return toResponse(appointmentRepository.save(appt));
     }
 
     private Appointment getOrThrow(Long id) {

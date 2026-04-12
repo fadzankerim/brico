@@ -4,14 +4,23 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "salons",
-        uniqueConstraints = @UniqueConstraint(columnNames = "slug"))
+@Table(
+    name = "salons",
+    uniqueConstraints = @UniqueConstraint(name = "uq_salons_slug", columnNames = "slug"),
+    indexes = {
+        @Index(name = "idx_salons_owner",    columnList = "owner_id"),
+        @Index(name = "idx_salons_city",     columnList = "city"),
+        @Index(name = "idx_salons_active",   columnList = "is_active"),
+        @Index(name = "idx_salons_verified", columnList = "verified")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -43,12 +52,10 @@ public class Salon {
     @Column(nullable = false, length = 200)
     private String address;
 
-    @DecimalMin(value = "-90.0") @DecimalMax(value = "90.0")
-    @Column(precision = 10, scale = 7)
+    @Column
     private Double latitude;
 
-    @DecimalMin(value = "-180.0") @DecimalMax(value = "180.0")
-    @Column(precision = 10, scale = 7)
+    @Column
     private Double longitude;
 
     @Column(length = 20)
@@ -65,7 +72,16 @@ public class Salon {
     @Builder.Default
     private Boolean isActive = true;
 
-    // Referenca na vlasnika u user-service (bez FK jer je drugi servis)
+    // Cached/denormalizovano za brzo filtriranje bez join-a prema review-service
+    @Column(name = "avg_rating", nullable = false)
+    @Builder.Default
+    private Double avgRating = 0.0;
+
+    @Column(name = "review_count", nullable = false)
+    @Builder.Default
+    private Integer reviewCount = 0;
+
+    // Referenca na vlasnika u user-service
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
@@ -73,7 +89,6 @@ public class Salon {
     @Column(name = "subscription_plan_id")
     private Long subscriptionPlanId;
 
-    // Stripe integracija (Financial Service)
     @Column(name = "stripe_customer_id", length = 60)
     private String stripeCustomerId;
 
@@ -104,4 +119,8 @@ public class Salon {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

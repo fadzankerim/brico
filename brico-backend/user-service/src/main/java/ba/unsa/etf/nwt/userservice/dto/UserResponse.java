@@ -14,5 +14,8 @@ public class UserResponse {
     private String profilePhoto;
     private UserRole role;
     private Boolean emailVerified;
+    private Boolean isActive;
+    private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
