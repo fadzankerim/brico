@@ -1,0 +1,173 @@
+version: '3.8'
+
+services:
+  # ── Infrastructure ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: brico-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: brico
+      POSTGRES_PASSWORD: brico123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brico"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: brico-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: brico-config
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
+
+  # ── Microservices ─────────────────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: brico-users
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_users
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # Druga instanca user-servicea — demonstracija load balancinga
+  user-service-2:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: brico-users-2
+    restart: unless-stopped
+    ports:
+      - "8091:8081"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_users
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  salon-service:
+    build:
+      context: ./salon-service
+      dockerfile: Dockerfile
+    container_name: brico-salons
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_salons
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  booking-service:
+    build:
+      context: ./booking-service
+      dockerfile: Dockerfile
+    container_name: brico-bookings
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_bookings
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  review-service:
+    build:
+      context: ./review-service
+      dockerfile: Dockerfile
+    container_name: brico-reviews
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_reviews
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  portfolio-service:
+    build:
+      context: ./portfolio-service
+      dockerfile: Dockerfile
+    container_name: brico-portfolio
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_portfolio
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

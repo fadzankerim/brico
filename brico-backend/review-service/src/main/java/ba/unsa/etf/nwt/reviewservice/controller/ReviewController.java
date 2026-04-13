@@ -6,6 +6,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,10 +39,36 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.findBySalonId(salonId));
     }
 
+    // ── Paginacija ────────────────────────────────────────────────────
+
+    @GetMapping("/salons/{salonId}/reviews/paged")
+    @Operation(summary = "Dohvati recenzije salona sa paginacijom i sortiranjem")
+    public ResponseEntity<Page<ReviewResponse>> getBySalonPaged(
+            @PathVariable Long salonId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(reviewService.findBySalonIdPaged(salonId, pageable));
+    }
+
+    @GetMapping("/clients/{clientId}/reviews/paged")
+    @Operation(summary = "Dohvati recenzije klijenta sa paginacijom")
+    public ResponseEntity<Page<ReviewResponse>> getByClientPaged(
+            @PathVariable Long clientId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(reviewService.findByClientIdPaged(clientId, pageable));
+    }
+
+    // ── Statistika ────────────────────────────────────────────────────
+
     @GetMapping("/salons/{salonId}/rating")
     @Operation(summary = "Dohvati prosječnu ocjenu salona")
     public ResponseEntity<Map<String, Object>> getSalonRating(@PathVariable Long salonId) {
         return ResponseEntity.ok(reviewService.getSalonRating(salonId));
+    }
+
+    @GetMapping("/salons/{salonId}/reviews/stats")
+    @Operation(summary = "Statistika recenzija salona — distribucija ocjena, prosjek, ukupan broj")
+    public ResponseEntity<Map<String, Object>> getSalonReviewStats(@PathVariable Long salonId) {
+        return ResponseEntity.ok(reviewService.getSalonReviewStats(salonId));
     }
 
     @GetMapping("/clients/{clientId}/reviews")
@@ -51,6 +81,15 @@ public class ReviewController {
     @Operation(summary = "Kreiraj recenziju")
     public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(reviewService.create(req));
+    }
+
+    // ── PATCH — odgovor vlasnika salona ───────────────────────────────
+
+    @PatchMapping("/reviews/{id}/reply")
+    @Operation(summary = "Vlasnik dodaje odgovor na recenziju")
+    public ResponseEntity<ReviewResponse> addOwnerReply(@PathVariable Long id,
+                                                         @Valid @RequestBody OwnerReplyRequest req) {
+        return ResponseEntity.ok(reviewService.addOwnerReply(id, req));
     }
 
     @DeleteMapping("/reviews/{id}")

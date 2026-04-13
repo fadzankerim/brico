@@ -13,9 +13,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -131,5 +136,49 @@ class SubscriptionServiceTest {
 
         SubscriptionResponse resp = subscriptionService.cancelSubscription(1L);
         assertThat(resp.getStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void findAllSubscriptionsPaged_returnsPaginatedResults() {
+        Pageable pageable = PageRequest.of(0, 10);
+        SalonSubscription sub = sampleSubscription(basicPlan());
+        Page<SalonSubscription> page = new PageImpl<>(List.of(sub), pageable, 1);
+        when(subscriptionRepository.findAll(pageable)).thenReturn(page);
+
+        Page<SubscriptionResponse> result = subscriptionService.findAllSubscriptionsPaged(pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+    }
+
+    @Test
+    void getSubscriptionStats_returnsGroupedCounts() {
+        when(subscriptionRepository.countGroupByStatus()).thenReturn(
+                List.of(new Object[]{SubscriptionStatus.ACTIVE, 5L},
+                        new Object[]{SubscriptionStatus.CANCELLED, 2L})
+        );
+        when(subscriptionRepository.countActiveGroupByPlanType()).thenReturn(
+                List.of(new Object[]{PlanType.BASIC, 3L}, new Object[]{PlanType.PRO, 2L})
+        );
+
+        Map<String, Object> stats = subscriptionService.getSubscriptionStats();
+        assertThat(stats).containsKey("byStatus");
+        assertThat(stats).containsKey("activeByPlan");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Long> byStatus = (Map<String, Long>) stats.get("byStatus");
+        assertThat(byStatus.get("ACTIVE")).isEqualTo(5L);
+    }
+
+    @Test
+    void findAllPlansPaged_returnsActivePlans() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<SubscriptionPlan> page = new PageImpl<>(List.of(basicPlan()), pageable, 1);
+        when(planRepository.findByIsActive(true, pageable)).thenReturn(page);
+
+        Page<PlanResponse> result = subscriptionService.findAllPlansPaged(pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getPlanType()).isEqualTo(PlanType.BASIC);
     }
 }

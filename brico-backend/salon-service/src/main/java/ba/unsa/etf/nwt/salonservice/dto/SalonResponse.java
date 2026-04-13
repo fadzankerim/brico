@@ -19,8 +19,11 @@ public class SalonResponse {
     private Boolean verified;
     private Boolean isActive;
     private Long ownerId;
+    private Double avgRating;
+    private Integer reviewCount;
     private List<HairdresserResponse> hairdressers;
     private List<ServiceResponse> services;
     private List<PhotoResponse> photos;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

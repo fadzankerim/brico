@@ -6,12 +6,14 @@ import lombok.*;
 
 import java.math.BigDecimal;
 
-/**
- * Stavka termina - predstavlja jednu uslugu u okviru termina (višestruke usluge).
- * Naziv i cijena se denormalizuju radi nezavisnosti od salon-service.
- */
 @Entity
-@Table(name = "appointment_items")
+@Table(
+    name = "appointment_items",
+    indexes = {
+        @Index(name = "idx_items_appointment", columnList = "appointment_id"),
+        @Index(name = "idx_items_service",     columnList = "service_id")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,12 +24,10 @@ public class AppointmentItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ID usluge iz salon-service (logička referenca)
     @NotNull
     @Column(name = "service_id", nullable = false)
     private Long serviceId;
 
-    // Denormalizovani naziv usluge (snapshot u trenutku bookinga)
     @NotBlank
     @Column(name = "service_name", nullable = false, length = 100)
     private String serviceName;

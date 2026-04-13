@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +12,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "appointments")
+@Table(
+    name = "appointments",
+    indexes = {
+        @Index(name = "idx_appointments_client",      columnList = "client_id"),
+        @Index(name = "idx_appointments_salon",       columnList = "salon_id"),
+        @Index(name = "idx_appointments_hairdresser", columnList = "hairdresser_id"),
+        @Index(name = "idx_appointments_status",      columnList = "status"),
+        @Index(name = "idx_appointments_start_time",  columnList = "start_time"),
+        @Index(name = "idx_appointments_salon_time",  columnList = "salon_id,start_time")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,7 +33,6 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Reference na user-service i salon-service (bez JPA FK - mikroservis)
     @NotNull
     @Column(name = "client_id", nullable = false)
     private Long clientId;
@@ -74,6 +84,13 @@ public class Appointment {
     @Column(length = 300)
     private String notes;
 
+    // Popunjava se kada se termin otkaže
+    @Column(name = "cancel_reason", length = 300)
+    private String cancelReason;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
@@ -83,4 +100,8 @@ public class Appointment {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

@@ -6,6 +6,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +28,33 @@ public class SalonController {
     @Operation(summary = "Dohvati sve salone")
     public ResponseEntity<List<SalonResponse>> getAll() {
         return ResponseEntity.ok(salonService.findAll());
+    }
+
+    // ── Paginacija + sortiranje ────────────────────────────────────────
+
+    @GetMapping("/paged")
+    @Operation(summary = "Dohvati salone sa paginacijom i sortiranjem")
+    public ResponseEntity<Page<SalonResponse>> getAllPaged(
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(salonService.findAllPaged(pageable));
+    }
+
+    // ── Custom pretraga ────────────────────────────────────────────────
+
+    @GetMapping("/search")
+    @Operation(summary = "Pretraži salone po imenu ili gradu")
+    public ResponseEntity<Page<SalonResponse>> search(
+            @RequestParam String q,
+            @PageableDefault(size = 10, sort = "avgRating", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(salonService.search(q, pageable));
+    }
+
+    @GetMapping("/filter")
+    @Operation(summary = "Filtriraj salone po gradu i minimalnoj ocjeni")
+    public ResponseEntity<List<SalonResponse>> filter(
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) Double minRating) {
+        return ResponseEntity.ok(salonService.searchByCityAndRating(city, minRating));
     }
 
     @GetMapping("/{id}")
@@ -108,6 +139,15 @@ public class SalonController {
     public ResponseEntity<ServiceResponse> addService(@PathVariable Long salonId,
                                                       @Valid @RequestBody ServiceRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(salonService.addService(salonId, req));
+    }
+
+    @PostMapping("/{salonId}/services/batch")
+    @Operation(summary = "Dodaj više usluga odjednom (batch insert)")
+    public ResponseEntity<List<ServiceResponse>> addServicesBatch(
+            @PathVariable Long salonId,
+            @Valid @RequestBody List<ServiceRequest> requests) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(salonService.addServicesBatch(salonId, requests));
     }
 
     @PutMapping("/{salonId}/services/{serviceId}")

@@ -6,6 +6,8 @@ import ba.unsa.etf.nwt.salonservice.model.*;
 import ba.unsa.etf.nwt.salonservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,24 @@ public class SalonMgmtService {
     public List<SalonResponse> findAll() {
         return salonRepository.findAll().stream()
                 .map(s -> modelMapper.map(s, SalonResponse.class)).toList();
+    }
+
+    // Paginacija + sortiranje
+    public Page<SalonResponse> findAllPaged(Pageable pageable) {
+        return salonRepository.findAll(pageable)
+                .map(s -> modelMapper.map(s, SalonResponse.class));
+    }
+
+    // Custom pretraga po gradu i minimalnoj ocjeni
+    public List<SalonResponse> searchByCityAndRating(String city, Double minRating) {
+        return salonRepository.searchByCityAndRating(city, minRating).stream()
+                .map(s -> modelMapper.map(s, SalonResponse.class)).toList();
+    }
+
+    // Full-text pretraga sa paginacijom
+    public Page<SalonResponse> search(String q, Pageable pageable) {
+        return salonRepository.searchByNameOrCity(q, pageable)
+                .map(s -> modelMapper.map(s, SalonResponse.class));
     }
 
     public List<SalonResponse> findByOwnerId(Long ownerId) {
@@ -145,6 +165,23 @@ public class SalonMgmtService {
         ServiceResponse r = modelMapper.map(saved, ServiceResponse.class);
         r.setSalonId(salonId);
         return r;
+    }
+
+    // Batch insert usluga (transakcijski — ili sve ili ništa)
+    @Transactional
+    public List<ServiceResponse> addServicesBatch(Long salonId, List<ServiceRequest> requests) {
+        Salon salon = getSalonOrThrow(salonId);
+        List<SalonService> services = requests.stream().map(req -> {
+            SalonService svc = modelMapper.map(req, SalonService.class);
+            svc.setSalon(salon);
+            svc.setIsActive(true);
+            return svc;
+        }).toList();
+        return serviceRepository.saveAll(services).stream().map(saved -> {
+            ServiceResponse r = modelMapper.map(saved, ServiceResponse.class);
+            r.setSalonId(salonId);
+            return r;
+        }).toList();
     }
 
     @Transactional

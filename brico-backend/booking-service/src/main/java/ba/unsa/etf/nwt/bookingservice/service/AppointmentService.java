@@ -6,11 +6,16 @@ import ba.unsa.etf.nwt.bookingservice.model.*;
 import ba.unsa.etf.nwt.bookingservice.repository.AppointmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,13 +45,54 @@ public class AppointmentService {
                 .map(this::toResponse).toList();
     }
 
+    // ── Paginacija ────────────────────────────────────────────────────
+
+    public Page<AppointmentResponse> findAllPaged(Pageable pageable) {
+        return appointmentRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    public Page<AppointmentResponse> findBySalonIdPaged(Long salonId, Pageable pageable) {
+        return appointmentRepository.findBySalonId(salonId, pageable).map(this::toResponse);
+    }
+
+    public Page<AppointmentResponse> findByClientIdPaged(Long clientId, Pageable pageable) {
+        return appointmentRepository.findByClientId(clientId, pageable).map(this::toResponse);
+    }
+
+    // ── Custom query — vremenski raspon ──────────────────────────────
+
+    public List<AppointmentResponse> findByHairdresserAndDateRange(
+            Long hairdresserId, LocalDateTime from, LocalDateTime to) {
+        return appointmentRepository.findActiveByHairdresserAndDateRange(hairdresserId, from, to)
+                .stream().map(this::toResponse).toList();
+    }
+
+    public List<AppointmentResponse> findBySalonAndDateRange(
+            Long salonId, LocalDateTime from, LocalDateTime to) {
+        return appointmentRepository.findBySalonIdAndDateRange(salonId, from, to)
+                .stream().map(this::toResponse).toList();
+    }
+
+    // ── Statistika ────────────────────────────────────────────────────
+
+    public Map<String, Object> getSalonStats(Long salonId) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("salonId", salonId);
+        stats.put("total",     appointmentRepository.countBySalonId(salonId));
+        stats.put("pending",   appointmentRepository.countBySalonIdAndStatus(salonId, AppointmentStatus.PENDING));
+        stats.put("confirmed", appointmentRepository.countBySalonIdAndStatus(salonId, AppointmentStatus.CONFIRMED));
+        stats.put("completed", appointmentRepository.countBySalonIdAndStatus(salonId, AppointmentStatus.COMPLETED));
+        stats.put("cancelled", appointmentRepository.countBySalonIdAndStatus(salonId, AppointmentStatus.CANCELLED));
+        stats.put("revenue",   appointmentRepository.sumRevenueBySalon(salonId));
+        return stats;
+    }
+
     public AppointmentResponse findById(Long id) {
         return toResponse(getOrThrow(id));
     }
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest req) {
-        // Calculate total price and end time from items
         BigDecimal total = req.getItems().stream()
                 .map(AppointmentItemRequest::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -91,14 +137,36 @@ public class AppointmentService {
         return toResponse(appointmentRepository.save(appt));
     }
 
+    // ── PATCH — pomjeranje termina ────────────────────────────────────
+
     @Transactional
-    public void cancel(Long id) {
+    public AppointmentResponse reschedule(Long id, RescheduleRequest req) {
+        Appointment appt = getOrThrow(id);
+        if (appt.getStatus() == AppointmentStatus.COMPLETED ||
+            appt.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Završeni ili otkazani termini se ne mogu pomjeriti");
+        }
+        long durationMinutes = java.time.Duration.between(appt.getStartTime(), appt.getEndTime()).toMinutes();
+        appt.setStartTime(req.getNewStartTime());
+        appt.setEndTime(req.getNewStartTime().plusMinutes(durationMinutes));
+        appt.setStatus(AppointmentStatus.PENDING); // reset na pending nakon pomjeranja
+        if (req.getReason() != null) appt.setNotes(req.getReason());
+        return toResponse(appointmentRepository.save(appt));
+    }
+
+    @Transactional
+    public AppointmentResponse cancel(Long id, String reason) {
         Appointment appt = getOrThrow(id);
         if (appt.getStatus() == AppointmentStatus.COMPLETED) {
             throw new IllegalStateException("Završeni termini se ne mogu otkazati");
         }
+        if (appt.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Termin je već otkazan");
+        }
         appt.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appt);
+        appt.setCancelReason(reason);
+        appt.setCancelledAt(LocalDateTime.now());
+        return toResponse(appointmentRepository.save(appt));
     }
 
     private Appointment getOrThrow(Long id) {

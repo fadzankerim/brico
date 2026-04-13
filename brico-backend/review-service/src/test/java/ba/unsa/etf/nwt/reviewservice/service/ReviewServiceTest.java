@@ -14,6 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -70,7 +74,6 @@ class ReviewServiceTest {
 
     @Test
     void create_newReview_saves() {
-        when(reviewRepository.existsByClientIdAndAppointmentId(any(), any())).thenReturn(false);
         when(reviewRepository.save(any())).thenReturn(sampleReview());
 
         ReviewRequest req = new ReviewRequest();
@@ -126,5 +129,51 @@ class ReviewServiceTest {
 
         assertThatThrownBy(() -> reviewService.addFavorite(req))
                 .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    // ── Novi testovi za Zadatak 4 ─────────────────────────────────────
+
+    @Test
+    void findBySalonIdPaged_returnsPaginatedReviews() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Review> page = new PageImpl<>(List.of(sampleReview()), pageable, 1);
+        when(reviewRepository.findBySalonId(1L, pageable)).thenReturn(page);
+
+        Page<ReviewResponse> result = reviewService.findBySalonIdPaged(1L, pageable);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getRating()).isEqualTo(5);
+    }
+
+    @Test
+    void addOwnerReply_savesReplyAndTimestamp() {
+        Review review = sampleReview();
+        when(reviewRepository.findById(1L)).thenReturn(Optional.of(review));
+        when(reviewRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        OwnerReplyRequest req = new OwnerReplyRequest();
+        req.setReply("Hvala na recenziji!");
+
+        ReviewResponse resp = reviewService.addOwnerReply(1L, req);
+        assertThat(resp.getOwnerReply()).isEqualTo("Hvala na recenziji!");
+        assertThat(resp.getOwnerReplyAt()).isNotNull();
+    }
+
+    @Test
+    void getSalonReviewStats_returnsDistributionAndAverage() {
+        when(reviewRepository.countBySalonId(1L)).thenReturn(3L);
+        when(reviewRepository.calculateAverageRatingBySalonId(1L)).thenReturn(4.0);
+        when(reviewRepository.countBySalonIdGroupByRating(1L)).thenReturn(
+                List.of(new Object[]{4, 2L}, new Object[]{5, 1L})
+        );
+
+        Map<String, Object> stats = reviewService.getSalonReviewStats(1L);
+        assertThat(stats.get("totalReviews")).isEqualTo(3L);
+        assertThat(stats.get("averageRating")).isEqualTo(4.0);
+
+        @SuppressWarnings("unchecked")
+        Map<Integer, Long> dist = (Map<Integer, Long>) stats.get("distribution");
+        assertThat(dist.get(4)).isEqualTo(2L);
+        assertThat(dist.get(5)).isEqualTo(1L);
+        assertThat(dist.get(1)).isEqualTo(0L); // nezastupljene ocjene su 0
     }
 }

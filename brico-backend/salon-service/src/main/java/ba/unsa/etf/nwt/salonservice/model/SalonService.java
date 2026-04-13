@@ -3,11 +3,19 @@ package ba.unsa.etf.nwt.salonservice.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "services")
+@Table(
+    name = "services",
+    indexes = {
+        @Index(name = "idx_services_salon",  columnList = "salon_id"),
+        @Index(name = "idx_services_active", columnList = "is_active")
+    }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -47,4 +55,8 @@ public class SalonService {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Salon salon;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
