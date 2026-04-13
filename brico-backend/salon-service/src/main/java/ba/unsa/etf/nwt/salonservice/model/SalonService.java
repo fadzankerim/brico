@@ -37,7 +37,8 @@ public class SalonService {
 
     @NotNull(message = "Cijena je obavezna")
     @DecimalMin(value = "0.0", inclusive = false, message = "Cijena mora biti veća od 0")
-    @Column(nullable = false, precision = 10, scale = 2)
+    //@Column(nullable = false, precision = 10, scale = 7)
+    @Column()
     private BigDecimal price;
 
     @NotNull(message = "Trajanje je obavezno")
