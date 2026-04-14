@@ -21,6 +21,10 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (planRepository.count() > 0) {
+            log.info("=== Portfolio Service: podaci već postoje, preskačem seed ===");
+            return;
+        }
         log.info("=== Učitavanje početnih podataka za Portfolio Service ===");
 
         // ── BASIC plan ───────────────────────────────────────────

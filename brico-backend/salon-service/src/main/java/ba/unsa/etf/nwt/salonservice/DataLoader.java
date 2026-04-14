@@ -22,6 +22,10 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (salonRepository.count() > 0) {
+            log.info("=== Salon Service: podaci već postoje, preskačem seed ===");
+            return;
+        }
         log.info("=== Učitavanje početnih podataka za Salon Service ===");
 
         // ── Salon 1 ──────────────────────────────────────────────

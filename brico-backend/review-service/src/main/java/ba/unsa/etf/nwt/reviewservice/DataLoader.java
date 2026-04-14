@@ -21,6 +21,10 @@ public class DataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        if (reviewRepository.count() > 0) {
+            log.info("=== Review Service: podaci već postoje, preskačem seed ===");
+            return;
+        }
         log.info("=== Učitavanje početnih podataka za Review Service ===");
 
         // ── Recenzije ─────────────────────────────────────────────
