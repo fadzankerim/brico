@@ -71,6 +71,20 @@ public class UserService {
         return modelMapper.map(getOrThrow(id), UserResponse.class);
     }
 
+    /**
+     * Validacija za inter-service komunikaciju.
+     * Vraća mapu sa active:true/false, koristi booking-service Feign klijent.
+     * Baca ResourceNotFoundException ako korisnik ne postoji (→ 404).
+     */
+    public Map<String, Object> validate(Long id) {
+        User user = getOrThrow(id);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", user.getId());
+        result.put("active", user.getIsActive());
+        result.put("role", user.getRole().name());
+        return result;
+    }
+
     public UserResponse findByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa emailom '" + email + "' nije pronađen"));

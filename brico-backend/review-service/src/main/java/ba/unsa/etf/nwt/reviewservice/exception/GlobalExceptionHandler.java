@@ -24,6 +24,11 @@ public class GlobalExceptionHandler {
         return buildError("conflict", ex.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleServiceUnavailable(ServiceUnavailableException ex) {
+        return buildError("service_unavailable", ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fields = new HashMap<>();

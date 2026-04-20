@@ -1,5 +1,6 @@
 package ba.unsa.etf.nwt.reviewservice.service;
 
+import ba.unsa.etf.nwt.reviewservice.client.BookingClient;
 import ba.unsa.etf.nwt.reviewservice.dto.*;
 import ba.unsa.etf.nwt.reviewservice.exception.DuplicateResourceException;
 import ba.unsa.etf.nwt.reviewservice.exception.ResourceNotFoundException;
@@ -27,6 +28,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final FavoriteRepository favoriteRepository;
     private final ModelMapper modelMapper;
+    private final BookingClient bookingClient;
 
     // ── Reviews ────────────────────────────────────────────────────────
 
@@ -85,6 +87,18 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse create(ReviewRequest req) {
+        // ── Inter-service validacija (sinhrona komunikacija putem Feign + Eureka) ──
+        // Provjeri da termin postoji i da je COMPLETED u booking-service
+        if (req.getAppointmentId() != null) {
+            Map<String, Object> apptInfo = bookingClient.validateAppointment(req.getAppointmentId());
+            boolean completed = Boolean.TRUE.equals(apptInfo.get("completed"));
+            if (!completed) {
+                String status = (String) apptInfo.get("status");
+                throw new IllegalStateException(
+                    "Recenzija se može ostaviti samo za završene termine. Status termina: " + status);
+            }
+        }
+
         // Prevent duplicate review for same appointment
         if (req.getAppointmentId() != null &&
                 reviewRepository.existsByClientIdAndAppointmentId(req.getClientId(), req.getAppointmentId())) {

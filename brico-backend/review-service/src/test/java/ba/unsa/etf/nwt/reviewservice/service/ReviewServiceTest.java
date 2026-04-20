@@ -1,8 +1,10 @@
 package ba.unsa.etf.nwt.reviewservice.service;
 
+import ba.unsa.etf.nwt.reviewservice.client.BookingClient;
 import ba.unsa.etf.nwt.reviewservice.dto.*;
 import ba.unsa.etf.nwt.reviewservice.exception.DuplicateResourceException;
 import ba.unsa.etf.nwt.reviewservice.exception.ResourceNotFoundException;
+import ba.unsa.etf.nwt.reviewservice.exception.ServiceUnavailableException;
 import ba.unsa.etf.nwt.reviewservice.model.Favorite;
 import ba.unsa.etf.nwt.reviewservice.model.Review;
 import ba.unsa.etf.nwt.reviewservice.repository.FavoriteRepository;
@@ -32,6 +34,7 @@ class ReviewServiceTest {
 
     @Mock ReviewRepository reviewRepository;
     @Mock FavoriteRepository favoriteRepository;
+    @Mock BookingClient bookingClient;
     @InjectMocks ReviewService reviewService;
 
     private final ModelMapper modelMapper = new ModelMapper();
@@ -86,6 +89,8 @@ class ReviewServiceTest {
 
     @Test
     void create_duplicateAppointmentReview_throwsConflict() {
+        when(bookingClient.validateAppointment(1L))
+                .thenReturn(Map.of("id", 1L, "status", "COMPLETED", "completed", true));
         when(reviewRepository.existsByClientIdAndAppointmentId(1L, 1L)).thenReturn(true);
 
         ReviewRequest req = new ReviewRequest();
@@ -95,6 +100,53 @@ class ReviewServiceTest {
 
         assertThatThrownBy(() -> reviewService.create(req))
                 .isInstanceOf(DuplicateResourceException.class);
+    }
+
+    // ── Novi testovi za Zadatak 5 — inter-service komunikacija ────────
+
+    @Test
+    void create_appointmentNotCompleted_throwsIllegalState() {
+        when(bookingClient.validateAppointment(1L))
+                .thenReturn(Map.of("id", 1L, "status", "PENDING", "completed", false));
+
+        ReviewRequest req = new ReviewRequest();
+        req.setClientId(1L); req.setClientName("Ana");
+        req.setSalonId(1L); req.setRating(5);
+        req.setAppointmentId(1L);
+
+        assertThatThrownBy(() -> reviewService.create(req))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("PENDING");
+    }
+
+    @Test
+    void create_completedAppointment_savesReview() {
+        when(bookingClient.validateAppointment(1L))
+                .thenReturn(Map.of("id", 1L, "status", "COMPLETED", "completed", true));
+        when(reviewRepository.existsByClientIdAndAppointmentId(1L, 1L)).thenReturn(false);
+        when(reviewRepository.save(any())).thenReturn(sampleReview());
+
+        ReviewRequest req = new ReviewRequest();
+        req.setClientId(1L); req.setClientName("Ana");
+        req.setSalonId(1L); req.setRating(5);
+        req.setAppointmentId(1L);
+
+        ReviewResponse resp = reviewService.create(req);
+        assertThat(resp.getRating()).isEqualTo(5);
+    }
+
+    @Test
+    void create_bookingServiceUnavailable_throwsServiceUnavailable() {
+        when(bookingClient.validateAppointment(1L))
+                .thenThrow(new ServiceUnavailableException("booking-service nije dostupan"));
+
+        ReviewRequest req = new ReviewRequest();
+        req.setClientId(1L); req.setClientName("Ana");
+        req.setSalonId(1L); req.setRating(5);
+        req.setAppointmentId(1L);
+
+        assertThatThrownBy(() -> reviewService.create(req))
+                .isInstanceOf(ServiceUnavailableException.class);
     }
 
     @Test

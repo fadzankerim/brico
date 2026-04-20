@@ -76,6 +76,17 @@ public class UserController {
         return ResponseEntity.ok(userService.findById(id));
     }
 
+    /**
+     * Interni endpoint za inter-service validaciju.
+     * Koristi ga booking-service da provjeri da li klijent postoji i aktivan je.
+     */
+    @GetMapping("/{id}/validate")
+    @Operation(summary = "[Internal] Validacija korisnika za inter-service komunikaciju",
+               description = "Vraća 200 ako korisnik postoji i aktivan je, 404 ako ne postoji, 409 ako nije aktivan")
+    public ResponseEntity<Map<String, Object>> validate(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.validate(id));
+    }
+
     @GetMapping("/email/{email}")
     @Operation(summary = "Dohvati korisnika po emailu")
     public ResponseEntity<UserResponse> getByEmail(@PathVariable String email) {

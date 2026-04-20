@@ -1,0 +1,102 @@
+Opcija 1: Lokalno testiranje (preporučeno)
+Korak 1 — Pokreni infrastrukturu
+
+# Samo PostgreSQL i Eureka trebaju biti up
+docker-compose up postgres -d
+
+# Eureka pokreni iz terminala
+cd brico-backend/eureka-server
+mvn spring-boot:run
+Korak 2 — Pokreni servise (svaki u zasebnom terminalu)
+
+# Terminal 1
+cd user-service && mvn spring-boot:run
+
+# Terminal 2
+cd salon-service && mvn spring-boot:run
+
+# Terminal 3
+cd booking-service && mvn spring-boot:run
+
+# Terminal 4
+cd review-service && mvn spring-boot:run
+Korak 3 — Provjeri Eureka dashboard
+Otvori http://localhost:8761 — trebaš vidjeti sva 4 servisa registrovana.
+
+Testiranje komunikacije via Swagger UI
+Svaki servis ima Swagger:
+
+user-service: http://localhost:8081/swagger-ui.html
+salon-service: http://localhost:8082/swagger-ui.html
+booking-service: http://localhost:8083/swagger-ui.html
+review-service: http://localhost:8084/swagger-ui.html
+Test 1 — Kreiraj termin (booking → user + salon)
+Otvori http://localhost:8083/swagger-ui.html → POST /api/appointments:
+
+
+{
+  "clientId": 1,
+  "clientName": "Amina Begić",
+  "clientPhone": "+38763333001",
+  "hairdresserId": 1,
+  "hairdresserName": "Lejla Mehić",
+  "salonId": 1,
+  "salonName": "Test Salon",
+  "salonAddress": "Titova 1",
+  "startTime": "2026-05-01T10:00:00",
+  "items": [
+    {
+      "serviceId": 1,
+      "serviceName": "Šišanje",
+      "price": 15.00,
+      "durationMinutes": 30
+    }
+  ]
+}
+Očekivani rezultati:
+
+clientId: 1 postoji → 201 Created ✓
+clientId: 999 ne postoji → 404 (user-service vraća NotFound, Feign propagira)
+Ugasi user-service terminal → 503 Service Unavailable (fallback aktiviran)
+Test 2 — Ostavi recenziju (review → booking)
+Prvo postavi termin na COMPLETED. Na http://localhost:8083/swagger-ui.html → PATCH /api/appointments/1/status:
+
+
+{ "status": "COMPLETED" }
+Zatim http://localhost:8084/swagger-ui.html → POST /api/reviews:
+
+
+{
+  "clientId": 1,
+  "clientName": "Amina Begić",
+  "salonId": 1,
+  "appointmentId": 1,
+  "rating": 5,
+  "comment": "Odlično!"
+}
+Očekivani rezultati:
+
+Termin je COMPLETED → 201 Created ✓
+Termin je PENDING → 409 Conflict (nije završen)
+appointmentId: 999 ne postoji → 404
+Ugasi booking-service → 503 Service Unavailable
+Test 3 — Interni validate endpointi direktno
+
+# Validacija korisnika
+curl http://localhost:8081/api/users/1/validate
+
+# Validacija salona
+curl http://localhost:8082/api/salons/1/validate
+
+# Validacija termina
+curl http://localhost:8083/api/appointments/1/validate
+Test 4 — Fallback (servis pada)
+Ugasi user-service (Ctrl+C u terminalu)
+Pokušaj kreirati termin na booking-serviceu
+Dobiješ 503 Service Unavailable s porukom "user-service trenutno nije dostupan"
+Restart user-service → sve funkcioniše normalno
+Test 5 — Automatizirani (unit testovi)
+
+cd booking-service && mvn test
+cd review-service && mvn test
+Ovo testira sve scenarije bez pokretanja servisa (mock Feign klijenti).
