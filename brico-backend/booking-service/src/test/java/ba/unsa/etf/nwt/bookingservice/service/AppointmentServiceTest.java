@@ -1,7 +1,10 @@
 package ba.unsa.etf.nwt.bookingservice.service;
 
+import ba.unsa.etf.nwt.bookingservice.client.SalonClient;
+import ba.unsa.etf.nwt.bookingservice.client.UserClient;
 import ba.unsa.etf.nwt.bookingservice.dto.*;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
+import ba.unsa.etf.nwt.bookingservice.exception.ServiceUnavailableException;
 import ba.unsa.etf.nwt.bookingservice.model.*;
 import ba.unsa.etf.nwt.bookingservice.repository.AppointmentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +33,8 @@ import static org.mockito.Mockito.*;
 class AppointmentServiceTest {
 
     @Mock AppointmentRepository appointmentRepository;
+    @Mock UserClient userClient;
+    @Mock SalonClient salonClient;
     @InjectMocks AppointmentService appointmentService;
 
     private final ModelMapper modelMapper = new ModelMapper();
@@ -83,14 +88,7 @@ class AppointmentServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    @Test
-    void create_calculatesTotalAndEndTime() {
-        when(appointmentRepository.save(any())).thenAnswer(inv -> {
-            Appointment a = inv.getArgument(0);
-            a.setId(5L);
-            return a;
-        });
-
+    private AppointmentRequest sampleRequest() {
         AppointmentItemRequest itemReq = new AppointmentItemRequest();
         itemReq.setServiceId(1L);
         itemReq.setServiceName("Šišanje");
@@ -106,10 +104,52 @@ class AppointmentServiceTest {
         req.setSalonName("Elite Cut");
         req.setStartTime(LocalDateTime.now().plusDays(1));
         req.setItems(List.of(itemReq));
+        return req;
+    }
 
-        AppointmentResponse resp = appointmentService.create(req);
+    @Test
+    void create_calculatesTotalAndEndTime() {
+        when(userClient.validateUser(1L)).thenReturn(Map.of("id", 1L, "active", true, "role", "CLIENT"));
+        when(salonClient.validateSalon(1L)).thenReturn(Map.of("id", 1L, "active", true, "name", "Elite Cut"));
+        when(salonClient.validateService(1L, 1L)).thenReturn(Map.of("id", 1L, "active", true, "name", "Šišanje"));
+        when(appointmentRepository.save(any())).thenAnswer(inv -> {
+            Appointment a = inv.getArgument(0);
+            a.setId(5L);
+            return a;
+        });
+
+        AppointmentResponse resp = appointmentService.create(sampleRequest());
         assertThat(resp.getTotalPrice()).isEqualByComparingTo("20.00");
         assertThat(resp.getStatus()).isEqualTo(AppointmentStatus.PENDING);
+    }
+
+    // ── Novi testovi za Zadatak 5 — inter-service komunikacija ────────
+
+    @Test
+    void create_inactiveClient_throwsIllegalState() {
+        when(userClient.validateUser(1L)).thenReturn(Map.of("id", 1L, "active", false, "role", "CLIENT"));
+
+        assertThatThrownBy(() -> appointmentService.create(sampleRequest()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("nije aktivan");
+    }
+
+    @Test
+    void create_inactiveSalon_throwsIllegalState() {
+        when(userClient.validateUser(1L)).thenReturn(Map.of("id", 1L, "active", true, "role", "CLIENT"));
+        when(salonClient.validateSalon(1L)).thenReturn(Map.of("id", 1L, "active", false, "name", "Elite Cut"));
+
+        assertThatThrownBy(() -> appointmentService.create(sampleRequest()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("nije aktivan");
+    }
+
+    @Test
+    void create_userServiceUnavailable_throwsServiceUnavailable() {
+        when(userClient.validateUser(1L)).thenThrow(new ServiceUnavailableException("user-service nije dostupan"));
+
+        assertThatThrownBy(() -> appointmentService.create(sampleRequest()))
+                .isInstanceOf(ServiceUnavailableException.class);
     }
 
     @Test

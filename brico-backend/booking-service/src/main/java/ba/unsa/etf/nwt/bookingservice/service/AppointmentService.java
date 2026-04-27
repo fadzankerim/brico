@@ -1,5 +1,7 @@
 package ba.unsa.etf.nwt.bookingservice.service;
 
+import ba.unsa.etf.nwt.bookingservice.client.SalonClient;
+import ba.unsa.etf.nwt.bookingservice.client.UserClient;
 import ba.unsa.etf.nwt.bookingservice.dto.*;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.bookingservice.model.*;
@@ -24,6 +26,8 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final ModelMapper modelMapper;
+    private final UserClient userClient;
+    private final SalonClient salonClient;
 
     public List<AppointmentResponse> findAll() {
         return appointmentRepository.findAll().stream()
@@ -91,8 +95,46 @@ public class AppointmentService {
         return toResponse(getOrThrow(id));
     }
 
+    /**
+     * Validacija za inter-service komunikaciju.
+     * review-service poziva ovaj endpoint da provjeri status termina prije kreiranja recenzije.
+     */
+    public Map<String, Object> validate(Long id) {
+        Appointment appt = getOrThrow(id);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("id", appt.getId());
+        result.put("status", appt.getStatus().name());
+        result.put("salonId", appt.getSalonId());
+        result.put("clientId", appt.getClientId());
+        result.put("completed", appt.getStatus() == AppointmentStatus.COMPLETED);
+        return result;
+    }
+
     @Transactional
     public AppointmentResponse create(AppointmentRequest req) {
+        // ── Inter-service validacija (sinhrona komunikacija putem Feign + Eureka) ──
+        // 1. Provjeri da klijent postoji i aktivan je u user-service
+        Map<String, Object> userInfo = userClient.validateUser(req.getClientId());
+        if (Boolean.FALSE.equals(userInfo.get("active"))) {
+            throw new IllegalStateException("Klijent sa ID=" + req.getClientId() + " nije aktivan");
+        }
+
+        // 2. Provjeri da salon postoji i aktivan je u salon-service
+        Map<String, Object> salonInfo = salonClient.validateSalon(req.getSalonId());
+        if (Boolean.FALSE.equals(salonInfo.get("active"))) {
+            throw new IllegalStateException("Salon sa ID=" + req.getSalonId() + " nije aktivan");
+        }
+
+        // 3. Provjeri da svaka tražena usluga postoji u salon-service
+        for (AppointmentItemRequest item : req.getItems()) {
+            if (item.getServiceId() != null) {
+                Map<String, Object> svcInfo = salonClient.validateService(req.getSalonId(), item.getServiceId());
+                if (Boolean.FALSE.equals(svcInfo.get("active"))) {
+                    throw new IllegalStateException("Usluga sa ID=" + item.getServiceId() + " nije aktivna");
+                }
+            }
+        }
+
         BigDecimal total = req.getItems().stream()
                 .map(AppointmentItemRequest::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

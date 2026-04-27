@@ -80,6 +80,17 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.findById(id));
     }
 
+    /**
+     * Interni endpoint za inter-service validaciju.
+     * Koristi ga review-service da provjeri da li termin postoji i ima status COMPLETED.
+     */
+    @GetMapping("/{id}/validate")
+    @Operation(summary = "[Internal] Validacija termina za inter-service komunikaciju",
+               description = "Vraća status termina — review-service provjerava da je COMPLETED")
+    public ResponseEntity<Map<String, Object>> validate(@PathVariable Long id) {
+        return ResponseEntity.ok(appointmentService.validate(id));
+    }
+
     @PostMapping
     @Operation(summary = "Kreiraj novi termin")
     public ResponseEntity<AppointmentResponse> create(@Valid @RequestBody AppointmentRequest req) {

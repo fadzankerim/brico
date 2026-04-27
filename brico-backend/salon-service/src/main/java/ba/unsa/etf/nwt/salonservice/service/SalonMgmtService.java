@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -245,6 +246,39 @@ public class SalonMgmtService {
     public void deletePhoto(Long salonId, Long photoId) {
         getSalonOrThrow(salonId);
         photoRepository.deleteById(photoId);
+    }
+
+    /**
+     * Validacija salona za inter-service komunikaciju.
+     * Koristi booking-service Feign klijent da provjeri da li salon postoji i aktivan je.
+     */
+    public Map<String, Object> validateSalon(Long id) {
+        Salon salon = getSalonOrThrow(id);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("id", salon.getId());
+        result.put("active", salon.getIsActive());
+        result.put("name", salon.getName());
+        return result;
+    }
+
+    /**
+     * Validacija usluge salona za inter-service komunikaciju.
+     * Provjerava da usluga postoji, da pripada traženom salonu i da je aktivna.
+     */
+    public Map<String, Object> validateService(Long salonId, Long serviceId) {
+        getSalonOrThrow(salonId);
+        SalonService svc = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usluga sa ID=" + serviceId + " nije pronađena"));
+        if (!svc.getSalon().getId().equals(salonId)) {
+            throw new ResourceNotFoundException("Usluga ID=" + serviceId + " ne pripada salonu ID=" + salonId);
+        }
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("id", svc.getId());
+        result.put("salonId", salonId);
+        result.put("active", svc.getIsActive());
+        result.put("name", svc.getName());
+        result.put("durationMinutes", svc.getDurationMinutes());
+        return result;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/salons")
@@ -61,6 +62,27 @@ public class SalonController {
     @Operation(summary = "Dohvati salon po ID-u")
     public ResponseEntity<SalonResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(salonService.findById(id));
+    }
+
+    /**
+     * Interni endpoint za inter-service validaciju.
+     * Koristi ga booking-service da provjeri da li salon postoji i aktivan je.
+     */
+    @GetMapping("/{id}/validate")
+    @Operation(summary = "[Internal] Validacija salona za inter-service komunikaciju")
+    public ResponseEntity<Map<String, Object>> validateSalon(@PathVariable Long id) {
+        return ResponseEntity.ok(salonService.validateSalon(id));
+    }
+
+    /**
+     * Interni endpoint za inter-service validaciju usluge.
+     * Koristi ga booking-service da provjeri da usluga postoji i pripada traženom salonu.
+     */
+    @GetMapping("/{salonId}/services/{serviceId}/validate")
+    @Operation(summary = "[Internal] Validacija usluge za inter-service komunikaciju")
+    public ResponseEntity<Map<String, Object>> validateService(@PathVariable Long salonId,
+                                                               @PathVariable Long serviceId) {
+        return ResponseEntity.ok(salonService.validateService(salonId, serviceId));
     }
 
     @GetMapping("/slug/{slug}")
