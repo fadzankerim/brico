@@ -53,6 +53,28 @@ services:
       retries: 8
       start_period: 45s
 
+  # ── API Gateway ───────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: brico-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_URL: http://eureka-server:8761/eureka/
+      JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
+
   # ── Microservices ─────────────────────────────────────────────────────
   user-service:
     build:
@@ -67,6 +89,9 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,6 +112,9 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,6 +134,8 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -125,6 +155,8 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -144,6 +176,8 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
@@ -163,11 +197,39 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      GRPC_EVENTS_HOST: system-events-service
+      GRPC_EVENTS_PORT: "9090"
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+
+  system-events-service:
+    build:
+      context: ./system-events-service
+      dockerfile: Dockerfile
+    container_name: brico-events
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+      - "9090:9090"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/brico_events
+      DB_USER: brico
+      DB_PASS: brico123
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 45s
 
 volumes:
   postgres_data:

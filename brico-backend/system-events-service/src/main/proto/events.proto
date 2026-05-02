@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option java_package = "ba.unsa.etf.nwt.eventsservice.proto";
+option java_outer_classname = "EventsProto";
+option java_multiple_files = true;
+
+package events;
+
+service EventService {
+  rpc LogEvent (EventRequest) returns (EventResponse);
+  rpc GetRecentEvents (GetEventsRequest) returns (GetEventsResponse);
+}
+
+message EventRequest {
+  string service_name  = 1;
+  string action_type   = 2;
+  string resource_name = 3;
+  string response_type = 4;
+  string timestamp     = 5;
+  string user_id       = 6;
+  string details       = 7;
+}
+
+message EventResponse {
+  string id      = 1;
+  bool   success = 2;
+  string message = 3;
+}
+
+message GetEventsRequest {
+  string service_name = 1;
+  int32  limit        = 2;
+}
+
+message GetEventsResponse {
+  repeated EventRequest events = 1;
+}
