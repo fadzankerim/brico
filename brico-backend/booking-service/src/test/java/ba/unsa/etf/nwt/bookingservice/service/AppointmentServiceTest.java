@@ -2,6 +2,7 @@ package ba.unsa.etf.nwt.bookingservice.service;
 
 import ba.unsa.etf.nwt.bookingservice.client.SalonClient;
 import ba.unsa.etf.nwt.bookingservice.client.UserClient;
+import ba.unsa.etf.nwt.bookingservice.messaging.AppointmentEventPublisher;
 import ba.unsa.etf.nwt.bookingservice.dto.*;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.bookingservice.exception.ServiceUnavailableException;
@@ -35,6 +36,7 @@ class AppointmentServiceTest {
     @Mock AppointmentRepository appointmentRepository;
     @Mock UserClient userClient;
     @Mock SalonClient salonClient;
+    @Mock AppointmentEventPublisher eventPublisher;
     @InjectMocks AppointmentService appointmentService;
 
     private final ModelMapper modelMapper = new ModelMapper();

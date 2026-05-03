@@ -53,6 +53,23 @@ services:
       retries: 8
       start_period: 45s
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: brico-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: brico
+      RABBITMQ_DEFAULT_PASS: brico123
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   # ── API Gateway ───────────────────────────────────────────────────────
   api-gateway:
     build:
@@ -136,10 +153,16 @@ services:
       EUREKA_URL: http://eureka-server:8761/eureka/
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: brico
+      RABBITMQ_PASS: brico123
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   booking-service:
@@ -157,10 +180,16 @@ services:
       EUREKA_URL: http://eureka-server:8761/eureka/
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: brico
+      RABBITMQ_PASS: brico123
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   review-service:
