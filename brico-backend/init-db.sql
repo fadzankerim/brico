@@ -4,3 +4,4 @@ CREATE DATABASE brico_salons;
 CREATE DATABASE brico_bookings;
 CREATE DATABASE brico_reviews;
 CREATE DATABASE brico_portfolio;
+CREATE DATABASE brico_events;

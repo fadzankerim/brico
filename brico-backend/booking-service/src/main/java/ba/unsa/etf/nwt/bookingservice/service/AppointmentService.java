@@ -4,6 +4,8 @@ import ba.unsa.etf.nwt.bookingservice.client.SalonClient;
 import ba.unsa.etf.nwt.bookingservice.client.UserClient;
 import ba.unsa.etf.nwt.bookingservice.dto.*;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
+import ba.unsa.etf.nwt.bookingservice.messaging.AppointmentCreatedEvent;
+import ba.unsa.etf.nwt.bookingservice.messaging.AppointmentEventPublisher;
 import ba.unsa.etf.nwt.bookingservice.model.*;
 import ba.unsa.etf.nwt.bookingservice.repository.AppointmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class AppointmentService {
     private final ModelMapper modelMapper;
     private final UserClient userClient;
     private final SalonClient salonClient;
+    private final AppointmentEventPublisher eventPublisher;
 
     public List<AppointmentResponse> findAll() {
         return appointmentRepository.findAll().stream()
@@ -169,7 +172,19 @@ public class AppointmentService {
             appt.getItems().add(ai);
         }
 
-        return toResponse(appointmentRepository.save(appt));
+        Appointment saved = appointmentRepository.save(appt);
+
+        // ── Saga: objavi async event za rezervaciju slota u salon-serviceu ──
+        eventPublisher.publishAppointmentCreated(new AppointmentCreatedEvent(
+                saved.getId(),
+                saved.getHairdresserId(),
+                saved.getSalonId(),
+                saved.getStartTime(),
+                saved.getEndTime(),
+                saved.getClientId()
+        ));
+
+        return toResponse(saved);
     }
 
     @Transactional
