@@ -8,7 +8,9 @@ import {
 
 import { useLogout } from '../hooks/useAuth'
 import { useAuthStore } from '../store/authStore'
+import { useNotifications, useMarkRead, useMarkAllRead } from '../hooks/useNotifications'
 import { cn } from '../lib/utils'
+import { formatDistanceToNow, parseISO } from 'date-fns'
 
 
 type NavItem = { label: string; href: string; icon: React.ElementType; tab?: string }
@@ -47,10 +49,16 @@ const ADMIN_NAV: NavItem[] = [
 ]
 
 export default function DashboardLayout() {
-  const { user }   = useAuthStore()
-  const logout     = useLogout()
-  const location   = useLocation()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const { user }       = useAuthStore()
+  const logout         = useLogout()
+  const location       = useLocation()
+  const [mobileOpen, setMobileOpen]   = useState(false)
+  const [notifOpen, setNotifOpen]     = useState(false)
+
+  const { data: notifications = [] }  = useNotifications()
+  const markRead                      = useMarkRead()
+  const markAllRead                   = useMarkAllRead()
+  const unreadCount                   = notifications.filter(n => !n.isRead).length
 
   const navItems =
     user?.role === 'ADMIN'        ? ADMIN_NAV        :
@@ -178,12 +186,79 @@ export default function DashboardLayout() {
             <p className="text-sm text-slate-400">{roleLabel} · {user?.fullName}</p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button
-              title="Notifikacije — uskoro dostupno"
-              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen(o => !o)}
+                className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {notifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-11 w-80 z-50 bg-[#0F1623] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+                        <span className="text-sm font-semibold text-white">
+                          Notifikacije {unreadCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-xs">{unreadCount}</span>}
+                        </span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={() => markAllRead.mutate()}
+                            className="text-xs text-rose-400 hover:text-rose-300"
+                          >
+                            Označi sve
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-slate-500 text-sm">
+                            Nema notifikacija
+                          </div>
+                        ) : (
+                          notifications.slice(0, 20).map(n => (
+                            <div
+                              key={n.id}
+                              onClick={() => { if (!n.isRead) markRead.mutate(n.id) }}
+                              className={cn(
+                                'px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-white/3 transition-colors',
+                                !n.isRead && 'bg-rose-500/5'
+                              )}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={cn(
+                                  'mt-0.5 w-2 h-2 rounded-full shrink-0',
+                                  n.isRead ? 'bg-slate-600' : 'bg-rose-500'
+                                )} />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-white leading-snug">{n.title}</p>
+                                  <p className="text-xs text-slate-400 mt-0.5 leading-snug">{n.message}</p>
+                                  <p className="text-xs text-slate-600 mt-1">
+                                    {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 

@@ -139,8 +139,10 @@ public class DataLoader implements CommandLineRunner {
     private void addWorkingHours(Salon salon) {
         for (DayOfWeek day : DayOfWeek.values()) {
             boolean isDayOff = (day == DayOfWeek.SUNDAY);
+            // Model koristi 0-6 (Mon=0 ... Sun=6), DayOfWeek.getValue() je 1-7
+            int dayIndex = day.getValue() % 7; // Mon=1→1, ..., Sat=6→6, Sun=7→0
             workingHoursRepository.save(WorkingHours.builder()
-                    .salon(salon).dayOfWeek(day.getValue())
+                    .salon(salon).dayOfWeek(dayIndex)
                     .startTime(isDayOff ? null : LocalTime.of(8, 0))
                     .endTime(isDayOff ? null : LocalTime.of(20, 0))
                     .isDayOff(isDayOff).build());
