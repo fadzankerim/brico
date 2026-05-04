@@ -3,6 +3,7 @@ package ba.unsa.etf.nwt.userservice.controller;
 import ba.unsa.etf.nwt.userservice.dto.UserResponse;
 import ba.unsa.etf.nwt.userservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.userservice.model.UserRole;
+import ba.unsa.etf.nwt.userservice.grpc.EventGrpcClient;
 import ba.unsa.etf.nwt.userservice.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ class UserControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockBean UserService userService;
+    @MockBean EventGrpcClient eventGrpcClient;
 
     private UserResponse sampleResponse() {
         UserResponse r = new UserResponse();

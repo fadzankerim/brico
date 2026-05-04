@@ -3,6 +3,7 @@ package ba.unsa.etf.nwt.bookingservice.controller;
 import ba.unsa.etf.nwt.bookingservice.dto.AppointmentResponse;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.bookingservice.model.AppointmentStatus;
+import ba.unsa.etf.nwt.bookingservice.grpc.EventGrpcClient;
 import ba.unsa.etf.nwt.bookingservice.service.AppointmentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ class AppointmentControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockBean AppointmentService appointmentService;
+    @MockBean EventGrpcClient eventGrpcClient;
 
     private AppointmentResponse sampleResponse() {
         AppointmentResponse r = new AppointmentResponse();

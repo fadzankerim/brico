@@ -1,0 +1,198 @@
+================================================================
+ZADATAK 6 — gRPC (system-events-service, audit log)
+================================================================
+
+ŠTA JE IMPLEMENTIRANO
+----------------------
+1. system-events-service (port 8086, gRPC port 9090)
+   - model/SystemEvent.java         — JPA entitet (id UUID, serviceName, actionType,
+                                       resourceName, responseType, timestamp, userId, details)
+   - repository/SystemEventRepository.java
+   - grpc/EventServiceGrpcImpl.java — gRPC server, prima LogEvent pozive i sprema u bazu
+   - controller/SystemEventController.java — REST API za pregled logova
+   - src/main/proto/events.proto    — definicija protokola (EventService, EventRequest, EventResponse)
+   - Dockerfile
+
+2. gRPC klijent u booking-service, user-service, salon-service
+   - src/main/proto/events.proto         — kopija proto fajla
+   - grpc/EventGrpcClient.java           — šalje event ka system-events-service
+   - grpc/EventInterceptor.java          — HandlerInterceptor, hvata svaki HTTP zahtjev
+   - config/WebMvcConfig.java            — registruje interceptor za /api/**
+   - application.properties             — grpc.client.system-events-service.address
+
+3. docker-compose.yml
+   - system-events-service servis (ports 8086:8086, 9090:9090)
+   - GRPC_EVENTS_HOST i GRPC_EVENTS_PORT env vars u svim servisima
+
+KAKO TESTIRATI (Docker)
+-----------------------
+Korak 1 — Pokreni sve servise
+  docker-compose up --build -d
+
+Korak 2 — Napravi bilo koji HTTP zahtjev prema nekom servisu
+  Primjer: otvori Swagger UI salon-servicea
+  http://localhost:8082/swagger-ui.html
+  Pozovi GET /api/salons
+
+Korak 3 — Provjeri da je event logovan
+  http://localhost:8086/swagger-ui.html
+  Pozovi GET /api/events/recent
+
+  Trebas vidjeti novi event:
+  {
+    "serviceName": "salon-service",
+    "actionType": "GET",
+    "resourceName": "Salon",
+    "responseType": "SUCCESS",
+    "timestamp": "2026-xx-xx...",
+    ...
+  }
+
+Korak 4 — Filtriraj evente po servisu
+  GET /api/events/recent?service=booking-service
+  GET /api/events/recent?service=user-service
+
+Korak 5 — Statistika
+  GET /api/events/stats
+  Vraca: { "salon-service": 5, "booking-service": 3, ... }
+
+Korak 6 — Provjeri da sistem radi i ako system-events-service pada
+  docker stop brico-events
+  Napravi zahtjev prema salon-serviceu → normalno vraca 200
+  (EventGrpcClient ima try/catch, loguje warning ali ne puca)
+  docker start brico-events → eventing se nastavlja
+
+
+================================================================
+ZADATAK 7 — API Gateway + JWT autentifikacija
+================================================================
+
+ŠTA JE IMPLEMENTIRANO
+----------------------
+1. api-gateway (port 8080)
+   - pom.xml                   — spring-cloud-starter-gateway, jjwt-api 0.12.3, Eureka client
+   - filter/JwtAuthFilter.java — GlobalFilter, validira JWT token na svakom zahtjevu,
+                                  prosljeđuje X-User-Id, X-User-Role, X-User-Email headerima
+   - util/JwtUtil.java         — parsira i validira JWT (HS256)
+   - application.yml           — rute prema svim mikroservisima (lb://user-service itd.)
+   - Dockerfile
+
+2. user-service — auth endpointi
+   - auth/AuthController.java       — POST /api/auth/login
+                                       POST /api/auth/refresh
+                                       POST /api/auth/logout
+   - auth/JwtService.java           — generise access token (15 min) i refresh token (UUID)
+   - auth/RefreshToken.java         — JPA entitet, refresh token u bazi (7 dana)
+   - auth/RefreshTokenRepository.java
+   - auth/AuthRequest.java          — { email, password }
+   - auth/AuthResponse.java         — { accessToken, refreshToken, tokenType, expiresIn, user }
+   - auth/RefreshRequest.java       — { refreshToken }
+   - config/OpenApiConfig.java      — dodан PasswordEncoder (BCrypt) bean
+   - DataLoader.java                — ažuriran: koristi BCrypt za sve testne lozinke
+
+JAVNI ENDPOINTI (ne trebaju JWT)
+---------------------------------
+  POST /api/auth/login      — prijava
+  POST /api/auth/refresh    — obnavljanje tokena
+  POST /api/users           — registracija novog korisnika
+  GET  /api/salons/**       — pretraga i pregled salona (javno dostupno)
+
+SVE OSTALO zahtijeva:
+  Authorization: Bearer <access_token>
+
+KAKO TESTIRATI (Docker)
+-----------------------
+Korak 1 — Pokreni sve servise
+  docker-compose up --build -d
+
+Korak 2 — Prijava (login)
+  http://localhost:8080/swagger-ui/index.html   <-- NE RADI (gateway nema Swagger)
+
+  Koristi direktno user-service Swagger za auth endpointe:
+  http://localhost:8081/swagger-ui.html
+  POST /api/auth/login
+  Body:
+  {
+    "email": "klijent1@example.com",
+    "password": "password123"
+  }
+
+  Odgovor:
+  {
+    "accessToken": "eyJhbGci...",
+    "refreshToken": "uuid-string",
+    "tokenType": "Bearer",
+    "expiresIn": 900,
+    "user": { ... }
+  }
+
+Korak 3 — Test ZAŠTIĆENOG endpointa KROZ GATEWAY
+  Koristi Swagger ili curl:
+
+  a) BEZ tokena → treba dobiti 401:
+     curl http://localhost:8080/api/appointments
+     Odgovor: { "error": "unauthorized", "message": "Nedostaje Authorization header" }
+
+  b) SA tokenom → treba dobiti 200:
+     curl -H "Authorization: Bearer <tvoj_access_token>" http://localhost:8080/api/appointments
+
+  c) U Swagger UI pojedinog servisa (npr. http://localhost:8083/swagger-ui.html):
+     Klikni "Authorize" dugme (lokot ikona)
+     Upiši: Bearer eyJhbGci...
+     Sada svi zahtjevi šalju token automatski
+
+Korak 4 — Test JAVNOG endpointa (bez tokena)
+  curl http://localhost:8080/api/salons
+  Treba dobiti 200 OK (pretraga salona je javna)
+
+Korak 5 — Test REGISTRACIJE (bez tokena)
+  curl -X POST http://localhost:8080/api/users \
+    -H "Content-Type: application/json" \
+    -d '{"email":"novi@test.ba","password":"password123","fullName":"Novi Korisnik"}'
+  Treba dobiti 201 Created
+
+Korak 6 — Test REFRESH tokena
+  POST /api/auth/refresh (na user-service Swagger ili curl)
+  Body: { "refreshToken": "<tvoj_refresh_token>" }
+  Dobijas novi access token (isti refresh token vrijedi jos 7 dana)
+
+Korak 7 — Test ODJAVE
+  POST /api/auth/logout
+  Header: Authorization: Bearer <tvoj_access_token>
+  (ili ako ides kroz gateway: http://localhost:8080/api/auth/logout)
+  Dobijas 204 No Content
+  Refresh token je obrisan iz baze — sljedeci /refresh vraca 404
+
+Korak 8 — Test ISTEKLOG tokena
+  Sacekaj 15 minuta (ili promijeni JWT_SECRET pa pokusaj sa starim tokenom)
+  curl -H "Authorization: Bearer <stari_token>" http://localhost:8080/api/appointments
+  Odgovor: { "error": "unauthorized", "message": "Token nije validan ili je istekao" }
+
+TESTNI KORISNICI (svi imaju lozinku: password123)
+--------------------------------------------------
+  admin@brico.ba        — ADMIN
+  vlasnik1@brico.ba     — SALON_OWNER
+  vlasnik2@brico.ba     — SALON_OWNER
+  frizer1@brico.ba      — HAIRDRESSER
+  klijent1@example.com  — CLIENT
+  klijent2@example.com  — CLIENT
+
+ARHITEKTURA TOKA ZAHTJEVA
+--------------------------
+  Klijent
+    |
+    | HTTP + Authorization: Bearer <token>
+    v
+  API Gateway :8080
+    | JWT validan? --> JwtAuthFilter
+    | DA: dodaj X-User-Id, X-User-Role headere i proslijedi
+    | NE: vrati 401
+    v
+  Mikroservis (user :8081 / salon :8082 / booking :8083 / ...)
+    |
+    | afterCompletion (HandlerInterceptor)
+    v
+  system-events-service :9090 (gRPC)
+    |
+    v
+  PostgreSQL brico_events

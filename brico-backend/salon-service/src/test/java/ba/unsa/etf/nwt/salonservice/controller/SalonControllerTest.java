@@ -2,6 +2,7 @@ package ba.unsa.etf.nwt.salonservice.controller;
 
 import ba.unsa.etf.nwt.salonservice.dto.SalonResponse;
 import ba.unsa.etf.nwt.salonservice.exception.ResourceNotFoundException;
+import ba.unsa.etf.nwt.salonservice.grpc.EventGrpcClient;
 import ba.unsa.etf.nwt.salonservice.service.SalonMgmtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ class SalonControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockBean SalonMgmtService salonMgmtService;
+    @MockBean EventGrpcClient eventGrpcClient;
 
     private SalonResponse sampleResponse() {
         SalonResponse r = new SalonResponse();

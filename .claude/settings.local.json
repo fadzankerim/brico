@@ -15,7 +15,8 @@
       "Bash(cmd.exe /c \"tasklist /FI \\\\\"PID eq 24796\\\\\" 2>nul\")",
       "Bash(cmd.exe /c \"netstat -ano | findstr :8761\")",
       "Bash(curl -s http://localhost:8761/actuator/health)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(xargs cat *)"
     ]
   }
 }
