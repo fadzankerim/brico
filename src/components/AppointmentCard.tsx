@@ -46,7 +46,7 @@ export default function AppointmentCard({
           <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(a.startTime)}</span>
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatTime(a.startTime)}</span>
           <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{a.salonAddress}</span>
-          <span className="font-semibold text-white">{formatPrice(a.price)}</span>
+          <span className="font-semibold text-white">{formatPrice(a.totalPrice ?? a.price ?? 0)}</span>
         </div>
       </div>
  

@@ -35,8 +35,13 @@ export function useLogin() {
         default:             navigate('/')
       }
     },
-    onError: () => {
-      toast.error('Pogrešan email ili lozinka')
+    onError: (error: any) => {
+      const status = error?.response?.status
+      if (status === 403) {
+        toast.error('Nalog je deaktiviran.')
+      } else {
+        toast.error('Pogrešan email ili lozinka.')
+      }
     },
   })
 }
@@ -47,10 +52,13 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: async (data: OwnerRegisterData) => {
-      const { salonData, ...userFields } = data
+      const { salonData, confirmPassword: _, ...userFields } = data as any
+      if (userFields.phone === '') userFields.phone = undefined
       const res = await authService.register(userFields)
 
       if (res.user.role === 'SALON_OWNER' && salonData) {
+        // Spremi token odmah da bi salonService.create mogao koristiti Authorization header
+        useAuthStore.getState().setAuth(res.user, res.accessToken)
         const salon = await salonService.create({ ...salonData, ownerId: res.user.id })
         return { ...res, createdSalonId: salon.id }
       }
@@ -68,8 +76,16 @@ export function useRegister() {
         default:            navigate('/')
       }
     },
-    onError: () => {
-      toast.error('Greška pri registraciji. Provjerite podatke.')
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message
+      const errType = error?.response?.data?.error
+      if (errType === 'conflict') {
+        toast.error('Korisnik sa ovim emailom već postoji.')
+      } else if (errType === 'validation') {
+        toast.error('Provjerite unesene podatke.')
+      } else {
+        toast.error(msg ?? 'Greška pri registraciji.')
+      }
     },
   })
 }

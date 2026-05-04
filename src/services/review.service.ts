@@ -16,8 +16,16 @@ export const favoritesService = {
   getAll: () =>
     api.get<Favorite[]>('/favorites').then((r) => r.data),
 
-  add: (salonId: number) =>
-    api.post<Favorite>('/favorites', { salonId }).then((r) => r.data),
+  add: (salon: { id: number; name: string; slug: string; city: string; avgRating?: number; verified?: boolean }, userId: number) =>
+    api.post<Favorite>('/favorites', {
+      userId,
+      salonId:        salon.id,
+      salonName:      salon.name,
+      salonSlug:      salon.slug,
+      salonCity:      salon.city,
+      salonAvgRating: salon.avgRating ?? 0,
+      salonVerified:  salon.verified ?? false,
+    }).then((r) => r.data),
 
   remove: (salonId: number) =>
     api.delete(`/favorites/${salonId}`),

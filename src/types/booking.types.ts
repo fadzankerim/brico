@@ -52,8 +52,10 @@ export interface Appointment {
   startTime:       string   // ISO datetime
   endTime:         string   // startTime + sum(durations)
   status:          AppointmentStatus
-  price:           number   // total = sum(service.price)
+  price:           number   // alias za totalPrice (legacy compat)
+  totalPrice:      number   // backend polje
   notes?:          string
+  cancelReason?:   string
   invoice?:        Invoice
   createdAt:       string
 }

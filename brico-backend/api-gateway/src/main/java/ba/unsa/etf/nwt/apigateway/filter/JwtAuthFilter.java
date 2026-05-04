@@ -36,7 +36,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static final List<PublicEndpoint> PUBLIC_ENDPOINTS = List.of(
             new PublicEndpoint("POST", "/api/auth/login"),
             new PublicEndpoint("POST", "/api/auth/refresh"),
-            new PublicEndpoint("POST", "/api/users")   // registracija
+            new PublicEndpoint("POST", "/api/auth/register"),
+            new PublicEndpoint("POST", "/api/users")   // registracija direktno
     );
 
     @Override

@@ -11,4 +11,10 @@ public class FavoriteRequest {
 
     @NotNull(message = "Salon ID je obavezan")
     private Long salonId;
+
+    private String salonName;
+    private String salonSlug;
+    private String salonCity;
+    private Double salonAvgRating;
+    private Boolean salonVerified;
 }

@@ -34,6 +34,21 @@ public class Favorite {
     @Column(name = "salon_id", nullable = false)
     private Long salonId;
 
+    @Column(name = "salon_name", length = 100)
+    private String salonName;
+
+    @Column(name = "salon_slug", length = 120)
+    private String salonSlug;
+
+    @Column(name = "salon_city", length = 60)
+    private String salonCity;
+
+    @Column(name = "salon_avg_rating")
+    private Double salonAvgRating;
+
+    @Column(name = "salon_verified")
+    private Boolean salonVerified;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

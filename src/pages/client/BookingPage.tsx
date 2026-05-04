@@ -13,6 +13,7 @@ import {
 
 import { addDays, format, formatDuration, isSameDay, parseISO } from 'date-fns'
 import { useBookingStore } from '../../store/bookingStore'
+import { useAuthStore } from '../../store/authStore'
 import { useSalonById } from '../../hooks/useSalons'
 import { useAvailability, useCreateAppointment } from '../../hooks/useBooking'
 import { cn } from '../../lib/utils'
@@ -32,7 +33,8 @@ export default function BookingPage() {
     setData, reset, getTotalPrice, getTotalDuration,
   } = useBookingStore()
 
-  const { data: salon, isLoading } = useSalonById(salonId)   
+  const { user } = useAuthStore()
+  const { data: salon, isLoading } = useSalonById(salonId)
   const createAppointment = useCreateAppointment()
 
   const [completedAppt, setCompleted] = useState<Appointment | null>(null)
@@ -52,14 +54,30 @@ export default function BookingPage() {
   useEffect(() => () => reset(), [])
 
   function handleConfirm() {
-    if (!data.selectedHairdresser || !data.selectedServices.length || !data.selectedDate || !data.selectedTime) return
+    if (!data.selectedHairdresser || !data.selectedServices.length || !data.selectedDate || !data.selectedTime || !user || !salon) return
+
+    const totalDur = getTotalDuration()
+    const startTime = `${data.selectedDate}T${data.selectedTime}:00`
+
     createAppointment.mutate(
       {
-        hairdresserId: data.selectedHairdresser.id,
-        serviceIds:    data.selectedServices.map(s => s.id),
-        startTime:     `${data.selectedDate}T${data.selectedTime}:00`,
-        notes:         data.notes,
-      },
+        clientId:        user.id,
+        clientName:      user.fullName,
+        clientPhone:     user.phone,
+        hairdresserId:   data.selectedHairdresser.id,
+        hairdresserName: data.selectedHairdresser.name,
+        salonId:         salon.id,
+        salonName:       salon.name,
+        salonAddress:    salon.address,
+        startTime,
+        notes:           data.notes,
+        items: data.selectedServices.map(s => ({
+          serviceId:       s.id,
+          serviceName:     s.name,
+          price:           s.price,
+          durationMinutes: s.duration,
+        })),
+      } as any,
       { onSuccess: (appt) => setCompleted(appt) }
     )
   }
@@ -316,6 +334,7 @@ function StepDateTime() {
   const selectedDate = data.selectedDate ? parseISO(data.selectedDate) : null
  
   const { data: availability, isLoading } = useAvailability(
+    data.salonId,
     data.selectedHairdresser?.id,
     data.selectedDate,
     totalDur,

@@ -56,7 +56,7 @@ export default function FavoritesPage(){
                     Rezerviši
                   </Link>
                   <button
-                    onClick={() => toggleFavorites.mutate({ salonId: fav.salonId, isFavorited: true })}
+                    onClick={() => toggleFavorites.mutate({ salon: { id: fav.salonId, name: fav.salon?.name ?? '', slug: fav.salon?.slug ?? '', city: fav.salon?.city ?? '' }, isFavorited: true })}
                     className="w-9 h-9 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center text-rose-400 hover:bg-rose-500/10 transition-colors"
                   >
                     <Heart className="w-4 h-4 fill-current" />

@@ -22,12 +22,17 @@ export function useMyAppointments() {
   })
 }
 
-export function useAvailability(hairdresserId: number | undefined, date: string | undefined, totalDuration: number ) {
+export function useAvailability(
+  salonId: number | undefined,
+  hairdresserId: number | undefined,
+  date: string | undefined,
+  totalDuration: number
+) {
   return useQuery({
     queryKey: appointmentKeys.availability(hairdresserId!, date!, totalDuration),
-    queryFn: () => bookingService.getAvailability(hairdresserId!, date!, totalDuration),
-    enabled: !!hairdresserId && !!date && totalDuration > 0,
-    staleTime: 30_000, // 30s — availability changes fast
+    queryFn: () => bookingService.getAvailability(salonId!, hairdresserId!, date!, totalDuration),
+    enabled: !!salonId && !!hairdresserId && !!date && totalDuration > 0,
+    staleTime: 30_000,
   })
 }
 

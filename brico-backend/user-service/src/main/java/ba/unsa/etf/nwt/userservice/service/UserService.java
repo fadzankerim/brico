@@ -11,6 +11,7 @@ import ba.unsa.etf.nwt.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public List<UserResponse> findAll() {
         return userRepository.findAll().stream()
@@ -98,7 +100,9 @@ public class UserService {
         }
         User user = modelMapper.map(req, User.class);
         if (req.getRole() == null) user.setRole(UserRole.CLIENT);
-        // NOTE: In production, password would be BCrypt-hashed here
+        // Prazan string za phone → null (da prođe @Pattern validaciju na entitetu)
+        if (user.getPhone() != null && user.getPhone().isBlank()) user.setPhone(null);
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
         return modelMapper.map(userRepository.save(user), UserResponse.class);
     }
 

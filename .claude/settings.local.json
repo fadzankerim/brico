@@ -16,7 +16,25 @@
       "Bash(cmd.exe /c \"netstat -ano | findstr :8761\")",
       "Bash(curl -s http://localhost:8761/actuator/health)",
       "Bash(xargs grep:*)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(mvn clean *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(cat)",
+      "Bash(python3 /tmp/favorite_patch.py)",
+      "Bash(python /tmp/favorite_patch.py)",
+      "Bash(mvn package *)",
+      "Bash(docker exec *)",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"test999@test.com\",\"password\":\"password123\",\"fullName\":\"Test User\",\"role\":\"CLIENT\"}')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"test998@test.com\",\"password\":\"password123\",\"fullName\":\"Test User\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"noviuser@test.com\",\"password\":\"password123\",\"fullName\":\"Novi User\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')",
+      "Bash(docker-compose -f /c/Users/berin/Documents/GitHub/brico/brico-backend/docker-compose.yml up --build -d user-service user-service-2)",
+      "Bash(docker-compose up *)",
+      "Bash(docker info *)",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"novitest@test.com\",\"password\":\"password123\",\"fullName\":\"Novi Test\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')",
+      "Bash(curl -s http://localhost:8761/eureka/apps/USER-SERVICE)",
+      "Bash(curl -s -X POST http://localhost:8081/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"novitest2@test.com\",\"password\":\"password123\",\"fullName\":\"Novi Test\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')"
     ]
   }
 }

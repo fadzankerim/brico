@@ -54,11 +54,11 @@ export default function BookingSuccessScreen({ appointment: appt, onDone }: { ap
           </div>
  
           <div className="divide-y divide-white/5">
-            {(appt.services ?? []).map((s, i) => (
+            {(appt.items ?? appt.services ?? []).map((s: any, i: number) => (
               <div key={i} className="flex items-center justify-between px-5 py-2.5">
                 <div className="min-w-0">
                   <p className="text-sm text-white truncate">{s.serviceName}</p>
-                  {s.durationMinutes > 0 && <p className="text-xs text-slate-500">{formatDuration({minutes: s.durationMinutes})}</p>}
+                  {s.durationMinutes > 0 && <p className="text-xs text-slate-500">{formatDuration(s.durationMinutes)}</p>}
                 </div>
                 <span className="text-sm text-white ml-3 shrink-0">{formatPrice(s.price)}</span>
               </div>
@@ -67,7 +67,7 @@ export default function BookingSuccessScreen({ appointment: appt, onDone }: { ap
  
           <div className="px-5 py-3.5 bg-white/3 flex items-center justify-between">
             <span className="text-sm font-semibold text-slate-200">Ukupno</span>
-            <span className="text-xl font-bold text-white">{formatPrice(appt.price)}</span>
+            <span className="text-xl font-bold text-white">{formatPrice(appt.totalPrice ?? appt.price)}</span>
           </div>
  
           <div className="px-5 py-3 bg-amber-500/5 border-t border-amber-500/15">
