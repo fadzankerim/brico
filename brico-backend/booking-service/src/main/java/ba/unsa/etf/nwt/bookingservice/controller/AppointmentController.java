@@ -92,9 +92,18 @@ public class AppointmentController {
     }
 
     @PostMapping
-    @Operation(summary = "Kreiraj novi termin")
-    public ResponseEntity<AppointmentResponse> create(@Valid @RequestBody AppointmentRequest req) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(appointmentService.create(req));
+    @Operation(summary = "Kreiraj zahtjev za termin — asinhrono")
+    public ResponseEntity<Map<String, Object>> create(
+            @Valid @RequestBody AppointmentRequest req,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        // clientId se preuzima iz JWT tokena (via gateway), ne iz request tijela
+        if (userId != null) req.setClientId(userId);
+        AppointmentResponse appt = appointmentService.create(req);
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("message", "Zahtjev za rezervaciju je primljen i u obradi. Dobit ćete notifikaciju kada bude potvrđen.");
+        body.put("appointmentId", appt.getId());
+        body.put("status", appt.getStatus());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
 
     @PatchMapping("/{id}/status")

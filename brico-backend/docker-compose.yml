@@ -79,11 +79,11 @@ services:
       RABBITMQ_DEFAULT_USER: brico
       RABBITMQ_DEFAULT_PASS: brico123
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
       interval: 15s
-      timeout: 10s
-      retries: 15
-      start_period: 60s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
 
   # ── API Gateway ───────────────────────────────────────────────────────
   api-gateway:
