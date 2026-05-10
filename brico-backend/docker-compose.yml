@@ -53,6 +53,21 @@ services:
       retries: 8
       start_period: 45s
 
+  frontend:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    container_name: brico-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: brico-rabbitmq
@@ -65,10 +80,10 @@ services:
       RABBITMQ_DEFAULT_PASS: brico123
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
 
   # ── API Gateway ───────────────────────────────────────────────────────
   api-gateway:
@@ -82,6 +97,7 @@ services:
     environment:
       EUREKA_URL: http://eureka-server:8761/eureka/
       JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -107,6 +123,7 @@ services:
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
       JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
     depends_on:
@@ -130,6 +147,7 @@ services:
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
       JWT_SECRET: brico-nwt-secret-key-must-be-at-least-32-chars!!
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
     depends_on:
@@ -151,6 +169,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
       RABBITMQ_HOST: rabbitmq
@@ -178,6 +197,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
       RABBITMQ_HOST: rabbitmq
@@ -205,6 +225,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
     depends_on:
@@ -226,6 +247,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       GRPC_EVENTS_HOST: system-events-service
       GRPC_EVENTS_PORT: "9090"
     depends_on:
@@ -248,6 +270,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
     depends_on:
       postgres:
         condition: service_healthy
@@ -273,6 +296,7 @@ services:
       DB_USER: brico
       DB_PASS: brico123
       EUREKA_URL: http://eureka-server:8761/eureka/
+      JAVA_TOOL_OPTIONS: "-Xms64m -Xmx192m -XX:+UseContainerSupport"
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USER: brico

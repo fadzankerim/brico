@@ -5,6 +5,9 @@ export const reviewService = {
   getSalonReviews: (salonId: number) =>
     api.get<Review[]>(`/salons/${salonId}/reviews`).then((r) => r.data),
 
+  getClientReviews: (clientId: number) =>
+    api.get<Review[]>(`/clients/${clientId}/reviews`).then((r) => r.data),
+
   create: (data: CreateReviewRequest) =>
     api.post<Review>('/reviews', data).then((r) => r.data),
 

@@ -16,4 +16,7 @@ export const authService = {
 
   updateProfile: (data: Partial<User>) =>
     api.put<User>('/auth/me', data).then((r) => r.data),
+
+  updateCredentials: (userId: number, data: { email?: string; password?: string }) =>
+    api.patch<User>(`/users/${userId}/credentials`, data).then((r) => r.data),
 }

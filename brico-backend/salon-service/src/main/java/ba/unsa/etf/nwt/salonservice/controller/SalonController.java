@@ -1,7 +1,9 @@
 package ba.unsa.etf.nwt.salonservice.controller;
 
 import ba.unsa.etf.nwt.salonservice.dto.*;
+import ba.unsa.etf.nwt.salonservice.model.HairdresserUnavailability;
 import ba.unsa.etf.nwt.salonservice.repository.BookedSlotRepository;
+import ba.unsa.etf.nwt.salonservice.repository.HairdresserUnavailabilityRepository;
 import ba.unsa.etf.nwt.salonservice.service.SalonMgmtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,8 +32,9 @@ import java.util.Map;
 @Tag(name = "Salons", description = "Upravljanje salonima")
 public class SalonController {
 
-    private final SalonMgmtService      salonService;
-    private final BookedSlotRepository  bookedSlotRepository;
+    private final SalonMgmtService                    salonService;
+    private final BookedSlotRepository                bookedSlotRepository;
+    private final HairdresserUnavailabilityRepository unavailabilityRepository;
 
     @GetMapping
     @Operation(summary = "Dohvati sve salone")
@@ -162,7 +165,8 @@ public class SalonController {
             LocalDateTime slotEnd = current.plusMinutes(duration);
             boolean conflict = bookedSlotRepository.existsConflict(
                     hairdresserId, current, slotEnd,
-                    ba.unsa.etf.nwt.salonservice.model.BookedSlot.SlotStatus.RESERVED);
+                    ba.unsa.etf.nwt.salonservice.model.BookedSlot.SlotStatus.RESERVED)
+                    || unavailabilityRepository.existsUnavailability(hairdresserId, current, slotEnd);
 
             Map<String, Object> slot = new LinkedHashMap<>();
             slot.put("time", current.toLocalTime().toString());
@@ -180,6 +184,14 @@ public class SalonController {
     }
 
     // ── Hairdressers ───────────────────────────────────────────────────
+
+    @GetMapping("/hairdresser-profile")
+    @Operation(summary = "Dohvati profil frizera za prijavljenog korisnika (iz X-User-Id headera)")
+    public ResponseEntity<HairdresserResponse> getMyHairdresserProfile(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        if (userId == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(salonService.findHairdresserByUserId(userId));
+    }
 
     @GetMapping("/{salonId}/hairdressers")
     @Operation(summary = "Dohvati frizere salona")
@@ -207,6 +219,43 @@ public class SalonController {
     public ResponseEntity<Void> removeHairdresser(@PathVariable Long salonId,
                                                    @PathVariable Long hairdresserId) {
         salonService.removeHairdresser(salonId, hairdresserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Unavailability ─────────────────────────────────────────────────
+
+    @GetMapping("/{salonId}/hairdressers/{hairdresserId}/unavailability")
+    @Operation(summary = "Dohvati nedostupne termine frizera")
+    public ResponseEntity<List<HairdresserUnavailability>> getUnavailability(
+            @PathVariable Long salonId, @PathVariable Long hairdresserId) {
+        return ResponseEntity.ok(
+                unavailabilityRepository.findByHairdresserIdOrderByStartTimeAsc(hairdresserId));
+    }
+
+    @PostMapping("/{salonId}/hairdressers/{hairdresserId}/unavailability")
+    @Operation(summary = "Dodaj nedostupni termin frizera")
+    public ResponseEntity<HairdresserUnavailability> addUnavailability(
+            @PathVariable Long salonId,
+            @PathVariable Long hairdresserId,
+            @RequestBody Map<String, String> body) {
+
+        HairdresserUnavailability u = HairdresserUnavailability.builder()
+                .hairdresserId(hairdresserId)
+                .salonId(salonId)
+                .startTime(LocalDateTime.parse(body.get("startTime")))
+                .endTime(LocalDateTime.parse(body.get("endTime")))
+                .reason(body.getOrDefault("reason", null))
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(unavailabilityRepository.save(u));
+    }
+
+    @DeleteMapping("/{salonId}/hairdressers/{hairdresserId}/unavailability/{id}")
+    @Operation(summary = "Obriši nedostupni termin")
+    public ResponseEntity<Void> deleteUnavailability(
+            @PathVariable Long salonId,
+            @PathVariable Long hairdresserId,
+            @PathVariable Long id) {
+        unavailabilityRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -248,6 +297,30 @@ public class SalonController {
                                               @PathVariable Long serviceId) {
         salonService.deleteService(salonId, serviceId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Working Hours ─────────────────────────────────────────────────
+
+    @GetMapping("/{salonId}/working-hours")
+    @Operation(summary = "Dohvati radno vrijeme salona")
+    public ResponseEntity<List<ba.unsa.etf.nwt.salonservice.model.WorkingHours>> getWorkingHours(
+            @PathVariable Long salonId) {
+        return ResponseEntity.ok(salonService.findWorkingHours(salonId));
+    }
+
+    @PutMapping("/{salonId}/working-hours/{dayOfWeek}")
+    @Operation(summary = "Ažuriraj radno vrijeme za određeni dan (0=Pon, 6=Ned)")
+    public ResponseEntity<ba.unsa.etf.nwt.salonservice.model.WorkingHours> updateWorkingHours(
+            @PathVariable Long salonId,
+            @PathVariable Integer dayOfWeek,
+            @RequestBody Map<String, Object> body) {
+        Object isDayOffRaw = body.getOrDefault("isDayOff", false);
+        boolean isDayOff = isDayOffRaw instanceof Boolean
+                ? (Boolean) isDayOffRaw
+                : Boolean.parseBoolean(String.valueOf(isDayOffRaw));
+        String startTime = body.get("startTime") != null ? String.valueOf(body.get("startTime")) : null;
+        String endTime   = body.get("endTime")   != null ? String.valueOf(body.get("endTime"))   : null;
+        return ResponseEntity.ok(salonService.saveWorkingHours(salonId, dayOfWeek, startTime, endTime, isDayOff));
     }
 
     // ── Photos ─────────────────────────────────────────────────────────

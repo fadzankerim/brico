@@ -1,5 +1,6 @@
 package ba.unsa.etf.nwt.userservice.service;
 
+import ba.unsa.etf.nwt.userservice.dto.UpdateCredentialsRequest;
 import ba.unsa.etf.nwt.userservice.dto.UpdateUserRequest;
 import ba.unsa.etf.nwt.userservice.dto.UserRequest;
 import ba.unsa.etf.nwt.userservice.dto.UserResponse;
@@ -112,6 +113,22 @@ public class UserService {
         if (req.getFullName()     != null) user.setFullName(req.getFullName());
         if (req.getPhone()        != null) user.setPhone(req.getPhone());
         if (req.getProfilePhoto() != null) user.setProfilePhoto(req.getProfilePhoto());
+        return modelMapper.map(userRepository.save(user), UserResponse.class);
+    }
+
+    @Transactional
+    public UserResponse updateCredentials(Long id, UpdateCredentialsRequest req) {
+        User user = getOrThrow(id);
+        if (req.getEmail() != null && !req.getEmail().isBlank()) {
+            if (!req.getEmail().equals(user.getEmail()) &&
+                    userRepository.existsByEmail(req.getEmail())) {
+                throw new DuplicateResourceException("Email '" + req.getEmail() + "' već postoji");
+            }
+            user.setEmail(req.getEmail());
+        }
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
         return modelMapper.map(userRepository.save(user), UserResponse.class);
     }
 

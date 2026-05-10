@@ -19,4 +19,6 @@ public class HairdresserRequest {
     private String specialties;
 
     private String profilePhoto;
+
+    private Boolean isActive;
 }

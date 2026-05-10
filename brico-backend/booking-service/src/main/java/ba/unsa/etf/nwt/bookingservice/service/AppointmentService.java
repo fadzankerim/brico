@@ -223,7 +223,19 @@ public class AppointmentService {
         appt.setStatus(AppointmentStatus.CANCELLED);
         appt.setCancelReason(reason);
         appt.setCancelledAt(LocalDateTime.now());
-        return toResponse(appointmentRepository.save(appt));
+        Appointment saved = appointmentRepository.save(appt);
+
+        // Obavijesti klijenta da mu je termin otkazan
+        eventPublisher.publishNotification(
+                saved.getClientId(),
+                "APPOINTMENT_CANCELLED",
+                "Termin otkazan",
+                "Vaš termin u salonu " + saved.getSalonName() + " je otkazan." +
+                (reason != null && !reason.isBlank() ? " Razlog: " + reason : ""),
+                saved.getId()
+        );
+
+        return toResponse(saved);
     }
 
     private Appointment getOrThrow(Long id) {

@@ -19,4 +19,12 @@ public class AppointmentEventPublisher {
                 event);
         log.info("Objavljen event appointment.created za appointmentId={}", event.getAppointmentId());
     }
+
+    public void publishNotification(Long userId, String type, String title, String message, Long refId) {
+        rabbitTemplate.convertAndSend(
+                RabbitConfig.EXCHANGE,
+                RabbitConfig.NOTIFICATION_KEY,
+                new NotificationEvent(userId, type, title, message, refId));
+        log.info("Notifikacija → userId={} type={}", userId, type);
+    }
 }

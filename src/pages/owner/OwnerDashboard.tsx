@@ -1,10 +1,10 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuthStore } from "../../store/authStore"
 import type { Appointment } from "../../types/booking.types"
 import type { Salon } from "../../types/salon.typs"
-import { useSalonAppointments } from "../../hooks/useBooking"
+import { useSalonAppointments, useUpdateAppointmentStatus } from "../../hooks/useBooking"
 import { useMySalon, salonKeys } from "../../hooks/useSalons"
-import { CalendarDays, DollarSign, Star, TrendingUp, Users, Building2, Edit2, Check, X } from "lucide-react"
+import { CalendarDays, DollarSign, Star, TrendingUp, Users, Building2, Edit2, Check, X, Ban, Clock } from "lucide-react"
 import StatCard from "../../components/StatCard"
 import { formatPrice, formatTime } from "../../utils/dateUtils"
 import { motion } from "motion/react"
@@ -16,21 +16,36 @@ import SalonPhotosPanel from "../../components/SalonPhotosPanel"
 import { useSearchParams } from "react-router-dom"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import AddAppointmentModal from "../../components/AddAppointmentModal"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { salonService } from "../../services/salon.service"
+import { bookingService } from "../../services/booking.service"
 import { toast } from "sonner"
 
-const MOCK_REVENUE = [
-  { month: 'Jan', revenue: 2400 }, { month: 'Feb', revenue: 3100 },
-  { month: 'Mar', revenue: 2800 }, { month: 'Apr', revenue: 3600 },
-  { month: 'Maj', revenue: 4200 }, { month: 'Jun', revenue: 3900 },
-]
-const MOCK_PIE = [
-  { name: 'Šišanje', value: 38, color: '#e94560' },
-  { name: 'Bojenje', value: 28, color: '#f97316' },
-  { name: 'Tretman', value: 18, color: '#3b82f6' },
-  { name: 'Ostalo',  value: 16, color: '#6b7280' },
-]
+const DAY_NAMES = ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']
+
+const PIE_COLORS = ['#e94560', '#f97316', '#3b82f6', '#10b981', '#6b7280', '#a855f7']
+
+function buildRevenueChart(appointments: any[]) {
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec']
+  const map: Record<string, number> = {}
+  appointments.filter(a => a.status === 'COMPLETED').forEach(a => {
+    const m = MONTHS[new Date(a.startTime).getMonth()]
+    map[m] = (map[m] ?? 0) + (a.totalPrice ?? a.price ?? 0)
+  })
+  return MONTHS.slice(0, new Date().getMonth() + 1).map(m => ({ month: m, revenue: Math.round(map[m] ?? 0) }))
+}
+
+function buildPieChart(appointments: any[]) {
+  const map: Record<string, number> = {}
+  appointments.filter(a => a.status === 'COMPLETED').forEach(a => {
+    const name = a.serviceName ?? 'Ostalo'
+    map[name] = (map[name] ?? 0) + 1
+  })
+  const total = Object.values(map).reduce((s, v) => s + v, 0) || 1
+  return Object.entries(map).slice(0, 5).map(([name, count], i) => ({
+    name, value: Math.round((count / total) * 100), color: PIE_COLORS[i % PIE_COLORS.length]
+  }))
+}
 
 const CITIES = ['Sarajevo', 'Mostar', 'Banja Luka', 'Tuzla', 'Zenica', 'Bijeljina', 'Brčko', 'Trebinje']
 
@@ -67,6 +82,99 @@ function NoSalonState() {
       <p className="text-slate-400 text-sm max-w-sm">
         Vaš račun još nema pridružen salon. Kontaktirajte administratora ili se registrujte kao vlasnik salona.
       </p>
+    </div>
+  )
+}
+
+type DayState = { isDayOff: boolean; startTime: string; endTime: string }
+
+function WorkingHoursEditor({ salonId }: { salonId: number }) {
+  const queryClient = useQueryClient()
+  const { data: wh = [] } = useQuery({
+    queryKey: ['working-hours', salonId],
+    queryFn:  () => salonService.getWorkingHours(salonId),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const [days, setDays] = useState<DayState[]>(() =>
+    Array.from({ length: 7 }, (_, i) => ({ isDayOff: i === 6, startTime: '08:00', endTime: '20:00' }))
+  )
+
+  // Sync server data into local state; backend returns "HH:MM:SS" — truncate to "HH:MM"
+  useEffect(() => {
+    if (!Array.isArray(wh) || wh.length === 0) return
+    setDays(prev => {
+      const next = [...prev]
+      wh.forEach((d: any) => {
+        const idx = d.dayOfWeek === 0 ? 6 : d.dayOfWeek - 1
+        next[idx] = {
+          isDayOff:  !!d.isDayOff,
+          startTime: (d.startTime ?? '08:00').substring(0, 5),
+          endTime:   (d.endTime   ?? '20:00').substring(0, 5),
+        }
+      })
+      return next
+    })
+  }, [wh])
+
+  const update = useMutation({
+    mutationFn: ({ day, start, end, off }: { day: number; start: string; end: string; off: boolean }) =>
+      salonService.updateWorkingHours(salonId, day, { startTime: off ? undefined : start, endTime: off ? undefined : end, isDayOff: off }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['working-hours', salonId] })
+      toast.success('Radno vrijeme ažurirano')
+    },
+    onError: () => toast.error('Greška pri ažuriranju radnog vremena'),
+  })
+
+  return (
+    <div className="p-5 rounded-2xl bg-[#0F1623] border border-white/5 space-y-3">
+      <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Clock className="w-4 h-4 text-rose-400" />Radno vrijeme</h4>
+      {DAY_NAMES.map((name, i) => {
+        const backendDay = i === 6 ? 0 : i + 1
+        const { isDayOff, startTime, endTime } = days[i]
+        return (
+          <div key={i} className="flex items-center gap-3 text-sm">
+            <span className="w-28 text-slate-400 shrink-0">{name}</span>
+            <input
+              type="checkbox"
+              checked={isDayOff}
+              onChange={e => {
+                const off = e.target.checked
+                setDays(prev => prev.map((d, j) => j === i ? { ...d, isDayOff: off } : d))
+                update.mutate({ day: backendDay, start: startTime, end: endTime, off })
+              }}
+              className="accent-rose-500"
+            />
+            <span className="text-xs text-slate-500">Neradni dan</span>
+            {!isDayOff && (
+              <>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={e => {
+                    const v = e.target.value
+                    setDays(prev => prev.map((d, j) => j === i ? { ...d, startTime: v } : d))
+                    if (v) update.mutate({ day: backendDay, start: v, end: endTime, off: false })
+                  }}
+                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-rose-500/50"
+                />
+                <span className="text-slate-600">–</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={e => {
+                    const v = e.target.value
+                    setDays(prev => prev.map((d, j) => j === i ? { ...d, endTime: v } : d))
+                    if (v) update.mutate({ day: backendDay, start: startTime, end: v, off: false })
+                  }}
+                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-rose-500/50"
+                />
+              </>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -171,6 +279,8 @@ function SettingsTab({ salon }: { salon: Salon }) {
           {field('Web stranica', 'website')}
         </div>
       </div>
+
+      <WorkingHoursEditor salonId={salon.id} />
     </div>
   )
 }
@@ -180,11 +290,23 @@ export default function OwnerDashboard() {
   const [searchParams] = useSearchParams()
   const [addModalOpen, setAddModal] = useState(false)
   const [editTarget, setEditTarget] = useState<Appointment | null>(null)
+  const [cancelId, setCancelId] = useState<number | null>(null)
+  const queryClient = useQueryClient()
 
   const tab = searchParams.get('tab') ?? 'overview'
 
   const { data: salon, isLoading: salonLoading } = useMySalon()
   const { data: appointments = [] } = useSalonAppointments(salon?.id ?? 0)
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: number) => bookingService.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] })
+      toast.success('Termin otkazan')
+      setCancelId(null)
+    },
+    onError: () => toast.error('Greška pri otkazivanju'),
+  })
 
   if (salonLoading) return <DashboardSkeleton />
   if (!salon)       return <NoSalonState />
@@ -192,7 +314,9 @@ export default function OwnerDashboard() {
   const todayStr    = new Date().toDateString()
   const todayAppts  = appointments.filter(a => new Date(a.startTime).toDateString() === todayStr)
   const completed   = appointments.filter(a => a.status === 'COMPLETED')
-  const monthrevenue = completed.reduce((sum, a) => sum + a.price, 0)
+  const monthrevenue = completed.reduce((sum, a) => sum + (a.totalPrice ?? a.price ?? 0), 0)
+  const revenueChart = buildRevenueChart(appointments)
+  const pieChart     = buildPieChart(appointments)
 
   const hairdressers = Array.from(
     new Map(appointments.map(a => [
@@ -215,7 +339,7 @@ export default function OwnerDashboard() {
             <StatCard label="Danas termini"   value={todayAppts.length.toString()}    icon={CalendarDays} accent="rose"    change={{ value: 12 }} />
             <StatCard label="Mj. prihod"      value={formatPrice(monthrevenue)}        icon={DollarSign}   accent="emerald" change={{ value: 8 }} />
             <StatCard label="Aktivni frizeri" value={hairdressers.length.toString()}   icon={Users}        accent="blue" />
-            <StatCard label="Avg. ocjena"     value="4.8 ★"                            icon={Star}         accent="amber" />
+            <StatCard label="Avg. ocjena"     value={`${(salon.avgRating ?? 0).toFixed(1)} ★`} icon={Star} accent="amber" />
           </div>
           <div>
             <h2 className="font-display text-lg font-semibold text-white mb-4">Termini Danas</h2>
@@ -231,8 +355,20 @@ export default function OwnerDashboard() {
                       <p className="text-xs text-slate-400">{a.serviceName} · {a.hairdresserName}</p>
                     </div>
                     <span className="text-sm text-slate-300 shrink-0">{formatTime(a.startTime)}</span>
-                    <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.price)}</span>
+                    <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? a.price)}</span>
                     <AppointmentStatusBadge status={a.status} />
+                    {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
+                      cancelId === a.id ? (
+                        <div className="flex gap-1">
+                          <button onClick={() => cancelMutation.mutate(a.id)} className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 text-xs hover:bg-rose-500 hover:text-white transition-colors">Potvrdi</button>
+                          <button onClick={() => setCancelId(null)} className="px-2 py-1 rounded-lg bg-white/5 text-slate-400 text-xs">✕</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setCancelId(a.id)} title="Otkaži termin" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
+                      )
+                    )}
                   </motion.div>
                 ))}</div>
             }
@@ -285,7 +421,7 @@ export default function OwnerDashboard() {
           <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
             <h3 className="font-display font-semibold text-white mb-5">Prihod po Mjesecu</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={MOCK_REVENUE}>
+              <AreaChart data={revenueChart.length > 0 ? revenueChart : [{ month: '-', revenue: 0 }]}>
                 <defs>
                   <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#e94560" stopOpacity={0.3} />
@@ -306,12 +442,12 @@ export default function OwnerDashboard() {
               <h3 className="font-display font-semibold text-white mb-5">Najpopularnije Usluge</h3>
               <div className="flex items-center gap-6">
                 <PieChart width={140} height={140}>
-                  <Pie data={MOCK_PIE} cx={65} cy={65} innerRadius={38} outerRadius={62} paddingAngle={3} dataKey="value">
-                    {MOCK_PIE.map((_, i) => <Cell key={i} fill={MOCK_PIE[i].color} />)}
+                  <Pie data={pieChart.length > 0 ? pieChart : [{ name: 'Nema podataka', value: 1, color: '#334155' }]} cx={65} cy={65} innerRadius={38} outerRadius={62} paddingAngle={3} dataKey="value">
+                    {(pieChart.length > 0 ? pieChart : [{ color: '#334155' }]).map((s: any, i: number) => <Cell key={i} fill={s.color} />)}
                   </Pie>
                 </PieChart>
                 <div className="space-y-2.5 flex-1">
-                  {MOCK_PIE.map(s => (
+                  {(pieChart.length > 0 ? pieChart : []).map((s: any) => (
                     <div key={s.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />

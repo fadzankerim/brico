@@ -8,8 +8,11 @@ export function useNotifications() {
     queryKey: ['notifications'],
     queryFn:  () => notificationService.getAll(),
     enabled:  isAuthenticated(),
-    refetchInterval: 30_000, // polling svakih 30s
+    refetchInterval: 30_000,
     staleTime: 15_000,
+    retry: 1,
+    throwOnError: false,
+    placeholderData: [],
   })
 }
 

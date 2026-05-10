@@ -10,10 +10,13 @@ export interface Review {
   appointmentId?: number
   rating: number
   comment?: string
+  ownerReply?: string
   createdAt: string
 }
  
 export interface CreateReviewRequest {
+  clientId?: number
+  clientName?: string
   salonId: number
   hairdresserId?: number
   appointmentId?: number

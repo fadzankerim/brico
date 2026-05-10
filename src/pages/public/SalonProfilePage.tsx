@@ -2,6 +2,10 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { useAuthStore } from "../../store/authStore";
 import { useState } from "react";
 import { useFavorites, useSalon, useToggleFavorite } from "../../hooks/useSalons";
+import { useQuery } from "@tanstack/react-query";
+import { reviewService } from "../../services/review.service";
+import type { Review } from "../../types/review.types";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import ProfileSkeleton from "../../components/ProfileSkeleton";
 import { ArrowLeft, BadgeCheck, Calendar, ChevronRight, Clock, Globe, Heart, MapPin, Phone, Scissors, Star } from "lucide-react";
 import StarRating from "../../components/StarRating";
@@ -23,6 +27,12 @@ export default function SalonProfilePage() {
 
     const { data: salon, isLoading, error } = useSalon(slug!)
     const { data: favorites } = useFavorites();
+    const { data: reviews = [] } = useQuery<Review[]>({
+      queryKey: ['reviews', 'salon', salon?.id],
+      queryFn:  () => reviewService.getSalonReviews(salon!.id),
+      enabled:  !!salon?.id,
+      staleTime: 1000 * 60,
+    })
 
     const toggleFavorite = useToggleFavorite();
 
@@ -146,7 +156,7 @@ export default function SalonProfilePage() {
                     {/* Right: actions */}
                     <div className="flex items-center gap-3 lg:shrink-0">
                         <button
-                            onClick={() => toggleFavorite.mutate({ salonId: salon.id, isFavorited })}
+                            onClick={() => toggleFavorite.mutate({ salon: { id: salon.id, name: salon.name, slug: salon.slug, city: salon.city, avgRating: salon.avgRating, verified: salon.verified }, isFavorited })}
                             className={cn('w-11 h-11 rounded-xl flex items-center justify-center border transition-all',
                                 isFavorited
                                     ? 'bg-rose-500/15 border-rose-500/30 text-rose-400'
@@ -295,40 +305,55 @@ export default function SalonProfilePage() {
                                 <p className="text-xs text-slate-500 mt-1">{salon.reviewCount} recenzija</p>
                             </div>
                             <div className="flex-1 space-y-1.5">
-                                {[5, 4, 3, 2, 1].map((star) => (
-                                    <div key={star} className="flex items-center gap-2">
+                                {[5, 4, 3, 2, 1].map((star) => {
+                                    const count = reviews.filter(r => r.rating === star).length
+                                    const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0
+                                    return (
+                                      <div key={star} className="flex items-center gap-2">
                                         <span className="text-xs text-slate-500 w-2">{star}</span>
                                         <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                                            <div
-                                                className="h-full bg-amber-400 rounded-full"
-                                                style={{ width: `${Math.random() * 60 + (star === 5 ? 30 : star === 4 ? 20 : 5)}%` }}
-                                            />
+                                          <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
                                         </div>
-                                    </div>
-                                ))}
+                                        <span className="text-xs text-slate-600 w-5">{count}</span>
+                                      </div>
+                                    )
+                                })}
                             </div>
                         </div>
 
-                        {/* Placeholder reviews */}
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <div key={i} className="p-4 rounded-xl bg-[#0F1623] border border-white/5">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                                        K{i + 1}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="text-sm font-medium text-white">Klijent {i + 1}</span>
-                                            <span className="text-xs text-slate-500">Mart 2026</span>
-                                        </div>
-                                        <StarRating value={5 - i} readonly size="sm" />
-                                        <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                                            Odličan salon, profesionalni frizeri i ugodna atmosfera. Preporučujem svima!
-                                        </p>
-                                    </div>
+                        {reviews.length === 0 ? (
+                          <div className="py-10 text-center text-slate-500 text-sm bg-[#0F1623] rounded-2xl border border-white/5">
+                            Nema recenzija za ovaj salon
+                          </div>
+                        ) : (
+                          reviews.map((r) => (
+                            <div key={r.id} className="p-4 rounded-xl bg-[#0F1623] border border-white/5">
+                              <div className="flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                                  {r.clientName?.charAt(0) ?? '?'}
                                 </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-white">{r.clientName}</span>
+                                    <span className="text-xs text-slate-500">
+                                      {r.createdAt ? formatDistanceToNow(parseISO(r.createdAt), { addSuffix: true }) : ''}
+                                    </span>
+                                  </div>
+                                  <StarRating value={r.rating} readonly size="sm" />
+                                  {r.comment && (
+                                    <p className="text-sm text-slate-400 mt-2 leading-relaxed">{r.comment}</p>
+                                  )}
+                                  {r.ownerReply && (
+                                    <div className="mt-3 pl-3 border-l-2 border-rose-500/30">
+                                      <p className="text-xs text-slate-500 mb-1">Odgovor vlasnika:</p>
+                                      <p className="text-sm text-slate-300">{r.ownerReply}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                        ))}
+                          ))
+                        )}
                     </div>
                 )}
             </div>

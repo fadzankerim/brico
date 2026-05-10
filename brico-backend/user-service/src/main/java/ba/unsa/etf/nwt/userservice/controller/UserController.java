@@ -1,5 +1,6 @@
 package ba.unsa.etf.nwt.userservice.controller;
 
+import ba.unsa.etf.nwt.userservice.dto.UpdateCredentialsRequest;
 import ba.unsa.etf.nwt.userservice.dto.UpdateUserRequest;
 import ba.unsa.etf.nwt.userservice.dto.UserRequest;
 import ba.unsa.etf.nwt.userservice.dto.UserResponse;
@@ -104,6 +105,13 @@ public class UserController {
     public ResponseEntity<UserResponse> update(@PathVariable Long id,
                                                @Valid @RequestBody UpdateUserRequest req) {
         return ResponseEntity.ok(userService.update(id, req));
+    }
+
+    @PatchMapping("/{id}/credentials")
+    @Operation(summary = "Ažuriraj email i/ili lozinku korisnika")
+    public ResponseEntity<UserResponse> updateCredentials(@PathVariable Long id,
+                                                          @Valid @RequestBody UpdateCredentialsRequest req) {
+        return ResponseEntity.ok(userService.updateCredentials(id, req));
     }
 
     @DeleteMapping("/{id}")

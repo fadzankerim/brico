@@ -32,6 +32,8 @@ export default function ReviewModal({appointment, onClose}: ReviewModalProps){
   const { mutate: submit, isPending } = useMutation({
     mutationFn: () =>
       reviewService.create({
+        clientId:      appointment!.clientId,
+        clientName:    appointment!.clientName,
         salonId:       appointment!.salonId,
         hairdresserId: appointment!.hairdresserId,
         appointmentId: appointment!.id,
@@ -43,7 +45,14 @@ export default function ReviewModal({appointment, onClose}: ReviewModalProps){
       queryClient.invalidateQueries({ queryKey: appointmentKeys.mine() })
       queryClient.invalidateQueries({ queryKey: salonKeys.all })
     },
-    onError: () => toast.error('Greška pri slanju recenzije'),
+    onError: (err: any) => {
+      if (err?.response?.status === 409) {
+        toast.error('Recenzija za ovaj termin već postoji.')
+        onClose()
+      } else {
+        toast.error('Greška pri slanju recenzije')
+      }
+    },
   })
 
   const isOpen = !!appointment

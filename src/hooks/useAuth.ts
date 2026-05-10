@@ -96,10 +96,10 @@ export function useLogout() {
   const queryClient = useQueryClient()
 
   return () => {
+    queryClient.clear()   // otkaži sve pending upite PRIJE logout-a
     authService.logout()
     logout()
-    queryClient.clear()
-    navigate('/')
+    navigate('/', { replace: true })
     toast.success('Uspješno ste se odjavili')
   }
 }

@@ -58,7 +58,7 @@ export default function DashboardLayout() {
   const { data: notifications = [] }  = useNotifications()
   const markRead                      = useMarkRead()
   const markAllRead                   = useMarkAllRead()
-  const unreadCount                   = notifications.filter(n => !n.isRead).length
+  const unreadCount                   = (Array.isArray(notifications) ? notifications : []).filter(n => !n.isRead).length
 
   const navItems =
     user?.role === 'ADMIN'        ? ADMIN_NAV        :

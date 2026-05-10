@@ -30,7 +30,12 @@ export default function StaffManagementPanel({salonId}: StaffManagementPanelProp
     })
 
     const toggleActive = useMutation({
-        mutationFn: (h: Hairdresser) => salonService.updateHairdresser(salonId, h.id, {isActive: !h.isActive}),
+        mutationFn: (h: Hairdresser) => salonService.updateHairdresser(salonId, h.id, {
+            fullName:   h.fullName,
+            bio:        h.bio,
+            specialties: h.specialties,
+            isActive:   !h.isActive,
+        }),
         onSuccess: () => queryClient.invalidateQueries({queryKey: staffKey}),
         onError: () => toast.error("Greška pri ažuriranju statusa")
     })
