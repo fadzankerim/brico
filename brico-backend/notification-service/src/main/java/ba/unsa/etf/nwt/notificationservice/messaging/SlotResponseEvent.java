@@ -1,4 +1,4 @@
-package ba.unsa.etf.nwt.salonservice.messaging;
+package ba.unsa.etf.nwt.notificationservice.messaging;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

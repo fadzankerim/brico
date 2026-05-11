@@ -23,6 +23,11 @@ public class SlotResponseListener {
             appointment.setStatus(AppointmentStatus.CONFIRMED);
             appointmentRepository.save(appointment);
             log.info("Termin {} potvrđen (CONFIRMED)", event.getAppointmentId());
+
+            // Obogati event podacima iz appointment-a za notification-service
+            event.setClientId(appointment.getClientId());
+            event.setSalonName(appointment.getSalonName());
+            event.setStartTime(appointment.getStartTime().toString());
         });
     }
 
@@ -35,6 +40,11 @@ public class SlotResponseListener {
             appointment.setStatus(AppointmentStatus.CANCELLED);
             appointmentRepository.save(appointment);
             log.warn("Termin {} otkazan (CANCELLED) — kompenzacijska akcija", event.getAppointmentId());
+
+            // Obogati event za notification-service
+            event.setClientId(appointment.getClientId());
+            event.setSalonName(appointment.getSalonName());
+            event.setStartTime(appointment.getStartTime().toString());
         });
     }
 }

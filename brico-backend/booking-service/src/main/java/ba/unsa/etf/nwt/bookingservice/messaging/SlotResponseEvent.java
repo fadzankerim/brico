@@ -9,5 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SlotResponseEvent {
     private Long   appointmentId;
-    private String reason; // popunjeno samo kod rejection
+    private String reason;
+    private Long   clientId;
+    private String salonName;
+    private String startTime;
 }

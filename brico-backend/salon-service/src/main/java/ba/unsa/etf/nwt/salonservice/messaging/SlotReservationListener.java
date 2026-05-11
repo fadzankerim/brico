@@ -40,7 +40,9 @@ public class SlotReservationListener {
                     RabbitConfig.EXCHANGE,
                     RabbitConfig.SLOT_REJECTED_KEY,
                     new SlotResponseEvent(event.getAppointmentId(),
-                            "Frizer je zauzet u traženom terminu"));
+                            "Frizer je zauzet u traženom terminu",
+                            event.getClientId(), null,
+                            event.getStartTime() != null ? event.getStartTime().toString() : null));
         } else {
             // Frizer slobodan — spremi slot u bazu (lokalna transakcija 2)
             bookedSlotRepository.save(BookedSlot.builder()
@@ -59,7 +61,9 @@ public class SlotReservationListener {
             rabbitTemplate.convertAndSend(
                     RabbitConfig.EXCHANGE,
                     RabbitConfig.SLOT_RESERVED_KEY,
-                    new SlotResponseEvent(event.getAppointmentId(), null));
+                    new SlotResponseEvent(event.getAppointmentId(), null,
+                            event.getClientId(), null,
+                            event.getStartTime() != null ? event.getStartTime().toString() : null));
         }
     }
 }
