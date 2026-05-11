@@ -4,6 +4,7 @@ import ba.unsa.etf.nwt.salonservice.dto.*;
 import ba.unsa.etf.nwt.salonservice.model.HairdresserUnavailability;
 import ba.unsa.etf.nwt.salonservice.repository.BookedSlotRepository;
 import ba.unsa.etf.nwt.salonservice.repository.HairdresserUnavailabilityRepository;
+import ba.unsa.etf.nwt.salonservice.repository.WorkingHoursRepository;
 import ba.unsa.etf.nwt.salonservice.service.SalonMgmtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +36,7 @@ public class SalonController {
     private final SalonMgmtService                    salonService;
     private final BookedSlotRepository                bookedSlotRepository;
     private final HairdresserUnavailabilityRepository unavailabilityRepository;
+    private final WorkingHoursRepository              workingHoursRepository;
 
     @GetMapping
     @Operation(summary = "Dohvati sve salone")
@@ -155,12 +157,34 @@ public class SalonController {
             @RequestParam(defaultValue = "30") int duration) {
 
         LocalDate day = LocalDate.parse(date);
-        LocalDateTime dayStart = day.atTime(8, 0);
-        LocalDateTime dayEnd   = day.atTime(20, 0);
+
+        // Provjeri radno vrijeme salona za taj dan (0=Ned, 1=Pon ... 6=Sub)
+        int javaDow = day.getDayOfWeek().getValue(); // 1=Mon..7=Sun
+        int backendDow = javaDow == 7 ? 0 : javaDow; // convert to 0=Sun,1=Mon..6=Sat
+        var workingHoursOpt = workingHoursRepository.findBySalonIdAndDayOfWeek(salonId, backendDow);
 
         List<Map<String, Object>> slots = new ArrayList<>();
-        LocalDateTime current = dayStart;
 
+        // Ako je neradni dan — svi termini nedostupni
+        if (workingHoursOpt.isPresent() && Boolean.TRUE.equals(workingHoursOpt.get().getIsDayOff())) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("date", date);
+            result.put("hairdresserId", hairdresserId);
+            result.put("totalDuration", duration);
+            result.put("dayOff", true);
+            result.put("slots", slots);
+            return ResponseEntity.ok(result);
+        }
+
+        LocalTime startTime = workingHoursOpt.map(wh -> wh.getStartTime() != null ? wh.getStartTime() : LocalTime.of(8, 0))
+                .orElse(LocalTime.of(8, 0));
+        LocalTime endTime = workingHoursOpt.map(wh -> wh.getEndTime() != null ? wh.getEndTime() : LocalTime.of(20, 0))
+                .orElse(LocalTime.of(20, 0));
+
+        LocalDateTime dayStart = day.atTime(startTime);
+        LocalDateTime dayEnd   = day.atTime(endTime);
+
+        LocalDateTime current = dayStart;
         while (!current.plusMinutes(duration).isAfter(dayEnd)) {
             LocalDateTime slotEnd = current.plusMinutes(duration);
             boolean conflict = bookedSlotRepository.existsConflict(

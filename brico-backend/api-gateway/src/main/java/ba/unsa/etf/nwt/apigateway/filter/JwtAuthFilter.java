@@ -46,11 +46,26 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path    = request.getURI().getPath();
         String method  = request.getMethod().name();
 
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
         if (isPublic(path, method)) {
+            // Javni endpoint — ako postoji validan token, injectuj user info (npr. hairdresser-profile)
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                if (jwtUtil.isValid(token)) {
+                    Claims claims = jwtUtil.extractClaims(token);
+                    ServerWebExchange mutated = exchange.mutate()
+                            .request(request.mutate()
+                                    .header("X-User-Id",    claims.getSubject())
+                                    .header("X-User-Role",  claims.get("role",  String.class))
+                                    .header("X-User-Email", claims.get("email", String.class))
+                                    .build())
+                            .build();
+                    return chain.filter(mutated);
+                }
+            }
             return chain.filter(exchange);
         }
-
-        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return respondUnauthorized(exchange, "Nedostaje Authorization header (Bearer token)");
         }
