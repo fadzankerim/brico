@@ -1,5 +1,6 @@
 package ba.unsa.etf.nwt.salonservice.service;
 
+import ba.unsa.etf.nwt.salonservice.client.PortfolioClient;
 import ba.unsa.etf.nwt.salonservice.dto.*;
 import ba.unsa.etf.nwt.salonservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.salonservice.model.*;
@@ -26,6 +27,7 @@ public class SalonMgmtService {
     private final SalonPhotoRepository photoRepository;
     private final WorkingHoursRepository workingHoursRepository;
     private final ModelMapper modelMapper;
+    private final PortfolioClient portfolioClient;
 
     // ── Salons ─────────────────────────────────────────────────────────
 
@@ -126,6 +128,21 @@ public class SalonMgmtService {
     @Transactional
     public HairdresserResponse addHairdresser(Long salonId, HairdresserRequest req) {
         Salon salon = getSalonOrThrow(salonId);
+
+        // Provjeri limite plana (sinhrona komunikacija sa portfolio-service)
+        Map<String, Object> limits = portfolioClient.getSalonLimits(salonId);
+        Object maxRaw = limits.get("maxHairdressers");
+        if (maxRaw != null) {
+            int max = Integer.parseInt(maxRaw.toString());
+            long current = hairdresserRepository.countBySalonId(salonId);
+            if (current >= max) {
+                String plan = String.valueOf(limits.get("planType"));
+                throw new IllegalStateException(
+                    "Dostigli ste maksimalan broj frizera (" + max + ") za " + plan +
+                    " plan. Nadogradite na PRO plan za neograničen broj frizera.");
+            }
+        }
+
         Hairdresser h = modelMapper.map(req, Hairdresser.class);
         h.setSalon(salon);
         h.setIsActive(true);

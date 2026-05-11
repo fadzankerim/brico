@@ -139,4 +139,18 @@ public class SubscriptionService {
         r.setCreatedAt(sub.getCreatedAt());
         return r;
     }
+
+    // Limite za inter-service validaciju (salon-service provjerava prije dodavanja frizera)
+    public Map<String, Object> getSalonLimits(Long salonId) {
+        Map<String, Object> limits = new LinkedHashMap<>();
+        subscriptionRepository.findBySalonId(salonId).ifPresentOrElse(sub -> {
+            limits.put("planType",         sub.getPlan().getPlanType().name());
+            limits.put("maxHairdressers",  sub.getPlan().getMaxHairdressers()); // null = neograničeno
+        }, () -> {
+            // Salon bez pretplate → BASIC defaultne vrijednosti
+            limits.put("planType",        "BASIC");
+            limits.put("maxHairdressers", 3);
+        });
+        return limits;
+    }
 }

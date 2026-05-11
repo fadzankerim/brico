@@ -25,9 +25,17 @@ export default function StaffManagementPanel({salonId}: StaffManagementPanelProp
 
     const {data: staff = [], isLoading} = useQuery({
         queryKey: staffKey,
-        queryFn: () => salonService.getHairdressers(salonId)
-
+        queryFn: () => salonService.getHairdressers(salonId),
     })
+
+    const { data: limits } = useQuery({
+        queryKey: ['salon', salonId, 'limits'],
+        queryFn:  () => salonService.getSalonLimits(salonId),
+        staleTime: 1000 * 60 * 5,
+    })
+
+    const maxHairdressers = limits?.maxHairdressers ?? null
+    const atLimit = maxHairdressers !== null && staff.length >= maxHairdressers
 
     const toggleActive = useMutation({
         mutationFn: (h: Hairdresser) => salonService.updateHairdresser(salonId, h.id, {
@@ -69,15 +77,44 @@ export default function StaffManagementPanel({salonId}: StaffManagementPanelProp
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="font-display text-lg font-semibold text-white">Upravljanje Osobljem</h2>
-          <p className="text-sm text-slate-400 mt-0.5">{staff.length} frizera u salonu</p>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {staff.length} {maxHairdressers !== null ? `/ ${maxHairdressers}` : ''} frizera
+            {limits && (
+              <span className={`ml-2 px-1.5 py-0.5 rounded text-xs font-semibold ${
+                limits.planType === 'PRO' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-400'
+              }`}>
+                {limits.planType}
+              </span>
+            )}
+          </p>
         </div>
         <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium transition-colors"
+          onClick={() => atLimit
+            ? toast.error(`Dostigli ste limit od ${maxHairdressers} frizera (BASIC plan). Nadogradite na PRO za neograničen broj.`, { duration: 5000 })
+            : openAdd()
+          }
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+            atLimit
+              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+              : "bg-rose-500 hover:bg-rose-600 text-white"
+          )}
         >
           <Plus className="w-4 h-4" /> Dodaj Frizera
         </button>
       </div>
+
+      {atLimit && (
+        <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/8 border border-amber-500/20 mb-5">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-amber-300">Limit frizera dostignut</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              BASIC plan dozvoljava maksimalno {maxHairdressers} frizera. Nadogradite na PRO za neograničen broj.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Staff list */}
       {isLoading ? (
