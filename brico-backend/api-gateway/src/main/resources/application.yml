@@ -41,7 +41,7 @@ spring:
         - id: review-route
           uri: lb://review-service
           predicates:
-            - Path=/api/reviews/**, /api/favorites/**
+            - Path=/api/reviews/**, /api/favorites/**, /api/clients/**
 
         - id: portfolio-route
           uri: lb://portfolio-service

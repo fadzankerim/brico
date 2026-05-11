@@ -14,8 +14,9 @@ import org.springframework.stereotype.Component;
 public class SlotResponseListener {
 
     private final AppointmentRepository appointmentRepository;
+    private final AppointmentEventPublisher eventPublisher;
 
-    // Salon je rezervisao slot — potvrđujemo termin (finalna akcija)
+    // Salon je rezervisao slot — potvrđujemo termin i šaljemo notifikaciju klijentu
     @RabbitListener(queues = RabbitConfig.SLOT_RESERVED_QUEUE)
     public void onSlotReserved(SlotResponseEvent event) {
         log.info("Slot rezervisan za appointmentId={} — potvrđujem termin", event.getAppointmentId());
@@ -24,14 +25,18 @@ public class SlotResponseListener {
             appointmentRepository.save(appointment);
             log.info("Termin {} potvrđen (CONFIRMED)", event.getAppointmentId());
 
-            // Obogati event podacima iz appointment-a za notification-service
-            event.setClientId(appointment.getClientId());
-            event.setSalonName(appointment.getSalonName());
-            event.setStartTime(appointment.getStartTime().toString());
+            String timeStr = appointment.getStartTime()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            eventPublisher.publishNotification(
+                    appointment.getClientId(),
+                    "APPOINTMENT_CONFIRMED",
+                    "Termin potvrđen ✓",
+                    "Vaš termin u salonu " + appointment.getSalonName() + " (" + timeStr + ") je potvrđen.",
+                    appointment.getId());
         });
     }
 
-    // Salon je odbio slot — kompenzacijska akcija: otkazujemo termin
+    // Salon je odbio slot — kompenzacijska akcija: otkazujemo termin i obavještavamo klijenta
     @RabbitListener(queues = RabbitConfig.SLOT_REJECTED_QUEUE)
     public void onSlotRejected(SlotResponseEvent event) {
         log.warn("Slot odbijen za appointmentId={}: {} — otkazujem termin",
@@ -41,10 +46,13 @@ public class SlotResponseListener {
             appointmentRepository.save(appointment);
             log.warn("Termin {} otkazan (CANCELLED) — kompenzacijska akcija", event.getAppointmentId());
 
-            // Obogati event za notification-service
-            event.setClientId(appointment.getClientId());
-            event.setSalonName(appointment.getSalonName());
-            event.setStartTime(appointment.getStartTime().toString());
+            eventPublisher.publishNotification(
+                    appointment.getClientId(),
+                    "APPOINTMENT_CANCELLED",
+                    "Termin nije moguć ✗",
+                    "Nažalost, frizer je zauzet u traženom terminu u salonu " + appointment.getSalonName() +
+                    ". Molimo odaberite drugi termin.",
+                    appointment.getId());
         });
     }
 }
