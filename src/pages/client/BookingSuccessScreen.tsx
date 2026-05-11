@@ -1,9 +1,38 @@
 import { CheckCircle, Mail, Receipt, Sparkles } from "lucide-react";
 import type { Appointment } from "../../types/booking.types"
 import {motion} from "motion/react"
-import { formatDate, formatDateTime, formatPrice } from "../../utils/dateUtils";
-import { format, formatDuration, parseISO } from "date-fns";
+import { formatPrice } from "../../utils/dateUtils";
+import { formatDuration } from "date-fns";
 
+// Sigurno parsiranje datuma — radi i sa ISO stringom i sa nizom [god,mj,dan,sat,min]
+function safeDate(val: unknown): Date | null {
+  if (!val) return null
+  if (Array.isArray(val)) {
+    const [y, mo, d, h = 0, m = 0] = val as number[]
+    return new Date(y, mo - 1, d, h, m)
+  }
+  try {
+    const dt = new Date(String(val))
+    return isNaN(dt.getTime()) ? null : dt
+  } catch { return null }
+}
+
+function fmtDateTime(val: unknown) {
+  const d = safeDate(val)
+  if (!d) return '—'
+  return d.toLocaleDateString('bs-BA', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtDate(val: unknown) {
+  const d = safeDate(val)
+  return d ? d.toLocaleDateString('bs-BA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
+}
+
+function fmtTime(val: unknown) {
+  const d = safeDate(val)
+  return d ? d.toLocaleTimeString('bs-BA', { hour: '2-digit', minute: '2-digit' }) : '—'
+}
 
 export default function BookingSuccessScreen({ appointment: appt, onDone }: { appointment: Appointment; onDone: () => void }) {
   const inv = appt.invoice
@@ -38,7 +67,7 @@ export default function BookingSuccessScreen({ appointment: appt, onDone }: { ap
               {inv && (
                 <div className="text-right">
                   <p className="text-xs text-slate-500"># {inv.invoiceNumber}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{formatDate(appt.createdAt)}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{fmtDate(appt.createdAt)}</p>
                 </div>
               )}
             </div>
@@ -47,8 +76,8 @@ export default function BookingSuccessScreen({ appointment: appt, onDone }: { ap
           <div className="px-5 py-3 border-b border-white/5">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div><p className="text-xs text-slate-500 mb-0.5">Frizer</p><p className="text-white font-medium">{appt.hairdresserName}</p></div>
-              <div><p className="text-xs text-slate-500 mb-0.5">Datum</p><p className="text-white font-medium">{formatDateTime(appt.startTime)}</p></div>
-              <div><p className="text-xs text-slate-500 mb-0.5">Kraj termina</p><p className="text-white font-medium">{format(parseISO(appt.endTime), 'HH:mm')}</p></div>
+              <div><p className="text-xs text-slate-500 mb-0.5">Datum</p><p className="text-white font-medium">{fmtDateTime(appt.startTime)}</p></div>
+              <div><p className="text-xs text-slate-500 mb-0.5">Kraj termina</p><p className="text-white font-medium">{fmtTime(appt.endTime)}</p></div>
               <div><p className="text-xs text-slate-500 mb-0.5">Klijent</p><p className="text-white font-medium">{appt.clientName}</p></div>
             </div>
           </div>

@@ -13,6 +13,7 @@ public interface HairdresserRepository extends JpaRepository<Hairdresser, Long> 
 
     List<Hairdresser> findBySalonIdAndIsActive(Long salonId, Boolean isActive);
 
+    long countBySalonId(Long salonId);
     long countBySalonIdAndIsActive(Long salonId, Boolean isActive);
 
     List<Hairdresser> findByUserId(Long userId);

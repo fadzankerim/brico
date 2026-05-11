@@ -71,6 +71,10 @@ export const salonService = {
   deleteUnavailability: (salonId: number, hairdresserId: number, id: number) =>
     api.delete(`/salons/${salonId}/hairdressers/${hairdresserId}/unavailability/${id}`),
 
+  // Subscription limits
+  getSalonLimits: (salonId: number) =>
+    api.get<{ planType: string; maxHairdressers: number | null }>(`/subscriptions/salon/${salonId}/limits`).then(r => r.data),
+
   // Working Hours
   getWorkingHours: (salonId: number) =>
     api.get<any[]>(`/salons/${salonId}/working-hours`).then(r => r.data),

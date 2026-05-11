@@ -74,6 +74,12 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService.findBySalonId(salonId));
     }
 
+    @GetMapping("/subscriptions/salon/{salonId}/limits")
+    @Operation(summary = "[Internal] Dohvati limite plana za salon (za inter-service validaciju)")
+    public ResponseEntity<Map<String, Object>> getLimits(@PathVariable Long salonId) {
+        return ResponseEntity.ok(subscriptionService.getSalonLimits(salonId));
+    }
+
     @PostMapping("/subscriptions")
     @Operation(summary = "Pretplati salon na plan")
     public ResponseEntity<SubscriptionResponse> subscribe(@Valid @RequestBody SubscriptionRequest req) {
