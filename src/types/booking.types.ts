@@ -44,6 +44,7 @@ export interface Appointment {
   hairdresserName: string
   hairdresserPhoto?: string
   services:        AppointmentService[]
+  items?:          AppointmentService[]  // alias za services (backend vraća items)
   serviceId:       number   // primary service (first) — legacy compat
   serviceName:     string   // primary service name  — legacy compat
   salonId:         number
@@ -53,7 +54,7 @@ export interface Appointment {
   endTime:         string   // startTime + sum(durations)
   status:          AppointmentStatus
   price:           number   // alias za totalPrice (legacy compat)
-  totalPrice:      number   // backend polje
+  totalPrice?:     number   // backend polje (opcionalno za backward compat)
   notes?:          string
   cancelReason?:   string
   invoice?:        Invoice

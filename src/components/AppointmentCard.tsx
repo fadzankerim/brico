@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type { Appointment } from "../types/booking.types"
 import AppointmentStatusBadge from "./AppointmentStatusBadge"
+import ReviewModal from "./ReviewModal"
 import { Calendar, Clock, MapPin, X } from "lucide-react"
 import { formatDate, formatPrice, formatTime } from "../utils/dateUtils"
 
@@ -10,12 +11,15 @@ export default function AppointmentCard({
   appointment: a,
   onCancel,
   isPast,
+  alreadyReviewed = false,
 }: {
   appointment: Appointment
   onCancel: () => void
   isPast: boolean
+  alreadyReviewed?: boolean
 }) {
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
  
   return (
     <div className="p-4 rounded-2xl bg-[#0F1623] border border-white/5 flex gap-4">
@@ -82,11 +86,25 @@ export default function AppointmentCard({
  
       {isPast && a.status === 'COMPLETED' && (
         <div className="shrink-0">
-          <button className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 text-xs hover:bg-amber-500/20 transition-colors whitespace-nowrap">
-            ★ Ocijeni
-          </button>
+          {alreadyReviewed ? (
+            <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs whitespace-nowrap">
+              ✓ Ocijenjeno
+            </span>
+          ) : (
+            <button
+              onClick={() => setReviewOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 text-xs hover:bg-amber-500/20 transition-colors whitespace-nowrap"
+            >
+              ★ Ocijeni
+            </button>
+          )}
         </div>
       )}
+
+      <ReviewModal
+        appointment={reviewOpen ? a : null}
+        onClose={() => setReviewOpen(false)}
+      />
     </div>
   )
 }

@@ -37,7 +37,7 @@ export default function AppointmentModal({open, onClose, onSave, hairdressers, s
   const [clientPhone,   setClientPhone]   = useState('')
   const [notes,         setNotes]         = useState('')
 
-  const { data: availability } = useAvailability(hairdresserId || undefined, date || undefined)
+  const { data: availability } = useAvailability(undefined, hairdresserId || undefined, date || undefined, 30)
 
   const slots = availability?.slots ?? []
 

@@ -24,6 +24,7 @@ public class SalonMgmtService {
     private final HairdresserRepository hairdresserRepository;
     private final SalonServiceRepository serviceRepository;
     private final SalonPhotoRepository photoRepository;
+    private final WorkingHoursRepository workingHoursRepository;
     private final ModelMapper modelMapper;
 
     // ── Salons ─────────────────────────────────────────────────────────
@@ -101,6 +102,17 @@ public class SalonMgmtService {
 
     // ── Hairdressers ───────────────────────────────────────────────────
 
+    public HairdresserResponse findHairdresserByUserId(Long userId) {
+        return hairdresserRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(h -> {
+                    HairdresserResponse r = modelMapper.map(h, HairdresserResponse.class);
+                    r.setSalonId(h.getSalon().getId());
+                    return r;
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Profil frizera nije pronađen za ovog korisnika"));
+    }
+
     public List<HairdresserResponse> findHairdressersBySalon(Long salonId) {
         getSalonOrThrow(salonId);
         return hairdresserRepository.findBySalonId(salonId).stream()
@@ -132,6 +144,7 @@ public class SalonMgmtService {
         if (req.getBio()         != null) h.setBio(req.getBio());
         if (req.getSpecialties() != null) h.setSpecialties(req.getSpecialties());
         if (req.getProfilePhoto() != null) h.setProfilePhoto(req.getProfilePhoto());
+        if (req.getIsActive()    != null) h.setIsActive(req.getIsActive());
         Hairdresser saved = hairdresserRepository.save(h);
         HairdresserResponse r = modelMapper.map(saved, HairdresserResponse.class);
         r.setSalonId(salonId);
@@ -142,6 +155,29 @@ public class SalonMgmtService {
     public void removeHairdresser(Long salonId, Long hairdresserId) {
         getSalonOrThrow(salonId);
         hairdresserRepository.deleteById(hairdresserId);
+    }
+
+    // ── Working Hours ─────────────────────────────────────────────────
+
+    public List<WorkingHours> findWorkingHours(Long salonId) {
+        getSalonOrThrow(salonId);
+        return workingHoursRepository.findBySalonId(salonId);
+    }
+
+    @Transactional
+    public WorkingHours saveWorkingHours(Long salonId, Integer dayOfWeek,
+                                         String startTime, String endTime, Boolean isDayOff) {
+        Salon salon = getSalonOrThrow(salonId);
+        WorkingHours wh = workingHoursRepository
+                .findBySalonIdAndDayOfWeek(salonId, dayOfWeek)
+                .orElse(WorkingHours.builder().salon(salon).dayOfWeek(dayOfWeek).build());
+
+        wh.setIsDayOff(isDayOff != null ? isDayOff : false);
+        wh.setStartTime(startTime != null && !startTime.isBlank()
+                ? java.time.LocalTime.parse(startTime) : null);
+        wh.setEndTime(endTime != null && !endTime.isBlank()
+                ? java.time.LocalTime.parse(endTime) : null);
+        return workingHoursRepository.save(wh);
     }
 
     // ── Services ───────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 package ba.unsa.etf.nwt.salonservice.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -39,5 +40,6 @@ public class WorkingHours {
     @JoinColumn(name = "salon_id", nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @JsonIgnore
     private Salon salon;
 }

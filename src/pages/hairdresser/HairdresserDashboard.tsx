@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { CalendarDays, Clock, DollarSign, Star, TrendingUp } from "lucide-react";
+import { CalendarDays, Clock, DollarSign, Star, TrendingUp, Ban, Plus, Trash2 } from "lucide-react";
 import StatCard from "../../components/StatCard";
-import { useMyAppointments } from "../../hooks/useBooking";
 import { useAuthStore } from "../../store/authStore";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { salonService } from "../../services/salon.service";
+import { bookingService } from "../../services/booking.service";
+import { toast } from "sonner";
 import { formatDate, formatPrice, formatTime, isAppointmentPast } from "../../utils/dateUtils";
 import { motion } from "motion/react";
 import AppointmentStatusBadge from "../../components/AppointmentStatusBadge";
@@ -12,18 +15,7 @@ import type { Appointment } from "../../types/booking.types";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AddAppointmentModal from "../../components/AddAppointmentModal";
 
-const MOCK_REVENUE = [
-  { month: 'Jan', revenue: 1400 }, { month: 'Feb', revenue: 1800 },
-  { month: 'Mar', revenue: 1500 }, { month: 'Apr', revenue: 2100 },
-  { month: 'Maj', revenue: 2600 }, { month: 'Jun', revenue: 2300 },
-];
-
-const MOCK_PIE = [
-  { name: 'Šišanje', value: 45, color: '#e94560' },
-  { name: 'Bojenje', value: 30, color: '#f97316' },
-  { name: 'Tretman', value: 15, color: '#3b82f6' },
-  { name: 'Ostalo', value: 10, color: '#6b7280' },
-];
+const PIE_COLORS_H = ['#e94560', '#f97316', '#3b82f6', '#10b981', '#6b7280']
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -37,12 +29,65 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function HairdresserDashboard() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [addModalOpen, setAddModal] = useState(false);
   const [editTarget, setEditTarget] = useState<Appointment | null>(null);
+  const [cancelId, setCancelId] = useState<number | null>(null);
+  const [unavailStart, setUnavailStart] = useState('');
+  const [unavailEnd,   setUnavailEnd]   = useState('');
+  const [unavailReason, setUnavailReason] = useState('');
 
-  const { data: appointments = [], isLoading } = useMyAppointments();
+  // Dohvati hairdresser profil za prijavljenog korisnika
+  const { data: hairdresserProfile } = useQuery({
+    queryKey: ['hairdresser-profile'],
+    queryFn:  () => salonService.getMyHairdresserProfile(),
+    enabled:  !!user,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  // Dohvati termine za ovog frizera (po hairdresserId iz profila)
+  const { data: appointments = [], isLoading } = useQuery({
+    queryKey: ['appointments', 'hairdresser', hairdresserProfile?.id],
+    queryFn:  () => bookingService.getHairdresserAppointments(hairdresserProfile!.id),
+    enabled:  !!hairdresserProfile?.id,
+    staleTime: 1000 * 60,
+  })
   const [searchParams] = useSearchParams();
   const search = searchParams.get('tab') ?? 'overview';
+
+  // Unavailability
+  const { data: unavailability = [] } = useQuery({
+    queryKey: ['unavailability', hairdresserProfile?.salonId, hairdresserProfile?.id],
+    queryFn:  () => salonService.getUnavailability(hairdresserProfile!.salonId, hairdresserProfile!.id),
+    enabled:  !!hairdresserProfile?.id,
+  })
+
+  const addUnavail = useMutation({
+    mutationFn: () => salonService.addUnavailability(hairdresserProfile!.salonId, hairdresserProfile!.id, {
+      startTime: unavailStart, endTime: unavailEnd, reason: unavailReason || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unavailability'] })
+      toast.success('Nedostupnost dodana')
+      setUnavailStart(''); setUnavailEnd(''); setUnavailReason('')
+    },
+    onError: () => toast.error('Greška pri dodavanju'),
+  })
+
+  const removeUnavail = useMutation({
+    mutationFn: (id: number) => salonService.deleteUnavailability(hairdresserProfile!.salonId, hairdresserProfile!.id, id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['unavailability'] }),
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: number) => bookingService.cancel(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments', 'hairdresser', hairdresserProfile?.id] })
+      toast.success('Termin otkazan')
+      setCancelId(null)
+    },
+    onError: () => toast.error('Greška pri otkazivanju'),
+  })
 
   const today = new Date().toDateString();
   const todayAppts = appointments.filter((a) => new Date(a.startTime).toDateString() === today && a.status !== 'CANCELLED');
@@ -57,7 +102,21 @@ export default function HairdresserDashboard() {
     })
     .reduce((sum, a) => sum + a.price, 0);
 
-  const monthrevenue = completed.reduce((sum, a) => sum + a.price, 0);
+  const monthrevenue = completed.reduce((sum, a) => sum + (a.totalPrice ?? a.price ?? 0), 0)
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec']
+  const revenueChart = MONTHS.slice(0, new Date().getMonth() + 1).map(m => ({
+    month: m,
+    revenue: Math.round(completed.filter(a => MONTHS[new Date(a.startTime).getMonth()] === m)
+      .reduce((s, a) => s + (a.totalPrice ?? a.price ?? 0), 0))
+  }))
+
+  const svcMap: Record<string, number> = {}
+  completed.forEach(a => { const n = a.serviceName ?? 'Ostalo'; svcMap[n] = (svcMap[n] ?? 0) + 1 })
+  const total = Object.values(svcMap).reduce((s, v) => s + v, 0) || 1
+  const pieChart = Object.entries(svcMap).slice(0, 4).map(([name, count], i) => ({
+    name, value: Math.round((count / total) * 100), color: PIE_COLORS_H[i]
+  }))
 
   const hairdressers = user ? [{
     id: user.id || 1,
@@ -84,7 +143,7 @@ export default function HairdresserDashboard() {
             <StatCard label="Danas" value={(todayAppts.length).toString()} icon={CalendarDays} accent="rose" />
             <StatCard label="Nadolazeći" value={(upcoming.length).toString()} icon={Clock} accent="blue" />
             <StatCard label="Sedmica" value={formatPrice(weekRevenue)} icon={DollarSign} accent="emerald" />
-            <StatCard label="Ocjena" value="4.8 ★" icon={Star} accent="amber" />
+            <StatCard label="Ocjena" value={`${(hairdresserProfile?.avgRating ?? 0).toFixed(1)} ★`} icon={Star} accent="amber" />
           </div>
 
           {/* Today's appointments */}
@@ -135,7 +194,19 @@ export default function HairdresserDashboard() {
                     <p className="text-sm font-medium text-white">{a.clientName}</p>
                     <p className="text-xs text-slate-400">{a.serviceName} · {formatDate(a.startTime)} {formatTime(a.startTime)}</p>
                   </div>
-                  <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.price)}</span>
+                  <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? a.price)}</span>
+                  {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
+                    cancelId === a.id ? (
+                      <div className="flex gap-1">
+                        <button onClick={() => cancelMutation.mutate(a.id)} className="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 text-xs hover:bg-rose-500 hover:text-white">Potvrdi</button>
+                        <button onClick={() => setCancelId(null)} className="px-2 py-1 rounded-lg bg-white/5 text-slate-400 text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setCancelId(a.id)} title="Otkaži termin" className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0">
+                        <Ban className="w-3.5 h-3.5" />
+                      </button>
+                    )
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -167,7 +238,7 @@ export default function HairdresserDashboard() {
           <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
             <h3 className="font-display font-semibold text-white mb-5">Moj Prihod po Mjesecu</h3>
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={MOCK_REVENUE}>
+              <AreaChart data={revenueChart.length > 0 ? revenueChart : [{ month: '-', revenue: 0 }]}>
                 <defs>
                   <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#e94560" stopOpacity={0.3} />
@@ -188,12 +259,12 @@ export default function HairdresserDashboard() {
               <h3 className="font-display font-semibold text-white mb-5">Moje Najpopularnije Usluge</h3>
               <div className="flex items-center gap-6">
                 <PieChart width={140} height={140}>
-                  <Pie data={MOCK_PIE} cx={65} cy={65} innerRadius={38} outerRadius={62} paddingAngle={3} dataKey="value">
-                    {MOCK_PIE.map((_, i) => <Cell key={i} fill={MOCK_PIE[i].color} />)}
+                  <Pie data={pieChart.length > 0 ? pieChart : [{ name: 'Nema', value: 1, color: '#334155' }]} cx={65} cy={65} innerRadius={38} outerRadius={62} paddingAngle={3} dataKey="value">
+                    {(pieChart.length > 0 ? pieChart : [{ color: '#334155' }]).map((s: any, i: number) => <Cell key={i} fill={s.color} />)}
                   </Pie>
                 </PieChart>
                 <div className="space-y-2.5 flex-1">
-                  {MOCK_PIE.map((s) => (
+                  {(pieChart.length > 0 ? pieChart : []).map((s: any) => (
                     <div key={s.name} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
@@ -241,6 +312,61 @@ export default function HairdresserDashboard() {
                 </div>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* Unavailability (settings tab) */}
+      {search === 'settings' && hairdresserProfile && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl space-y-6">
+          <div>
+            <h3 className="font-semibold text-white mb-1">Moja nedostupnost</h3>
+            <p className="text-xs text-slate-500">Dodaj periode kada nisi dostupan — mušterije neće moći zakazivati u tim terminima.</p>
+          </div>
+
+          {/* Add new */}
+          <div className="p-5 rounded-2xl bg-[#0F1623] border border-white/5 space-y-4">
+            <h4 className="text-sm font-medium text-white">Dodaj nedostupni period</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Od</label>
+                <input type="datetime-local" value={unavailStart} onChange={e => setUnavailStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/50" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Do</label>
+                <input type="datetime-local" value={unavailEnd} onChange={e => setUnavailEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/50" />
+              </div>
+            </div>
+            <input type="text" value={unavailReason} onChange={e => setUnavailReason(e.target.value)}
+              placeholder="Razlog (opcionalno)"
+              className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50" />
+            <button
+              onClick={() => addUnavail.mutate()}
+              disabled={!unavailStart || !unavailEnd || addUnavail.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Dodaj period
+            </button>
+          </div>
+
+          {/* List */}
+          {unavailability.length > 0 && (
+            <div className="space-y-2">
+              {unavailability.map((u: any) => (
+                <div key={u.id} className="flex items-center gap-3 p-4 rounded-xl bg-[#0F1623] border border-white/5">
+                  <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white">{u.startTime?.replace('T', ' ')} – {u.endTime?.replace('T', ' ')}</p>
+                    {u.reason && <p className="text-xs text-slate-500">{u.reason}</p>}
+                  </div>
+                  <button onClick={() => removeUnavail.mutate(u.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 

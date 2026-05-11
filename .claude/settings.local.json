@@ -34,7 +34,23 @@
       "Bash(docker info *)",
       "Bash(curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"novitest@test.com\",\"password\":\"password123\",\"fullName\":\"Novi Test\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')",
       "Bash(curl -s http://localhost:8761/eureka/apps/USER-SERVICE)",
-      "Bash(curl -s -X POST http://localhost:8081/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"novitest2@test.com\",\"password\":\"password123\",\"fullName\":\"Novi Test\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')"
+      "Bash(curl -s -X POST http://localhost:8081/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"novitest2@test.com\",\"password\":\"password123\",\"fullName\":\"Novi Test\",\"phone\":\"\",\"role\":\"CLIENT\",\"confirmPassword\":\"password123\"}')",
+      "Bash(sed -i 's|    private String profilePhoto;\\\\n}|    private String profilePhoto;\\\\n\\\\n    private Boolean isActive;\\\\n}|' /c/Users/berin/Documents/GitHub/brico/brico-backend/salon-service/src/main/java/ba/unsa/etf/nwt/salonservice/dto/HairdresserRequest.java)",
+      "Bash(python3 -c ' *)",
+      "Bash(sed -i 's/  comment?: string\\\\n  createdAt: string/  comment?: string\\\\n  ownerReply?: string\\\\n  createdAt: string/' /c/Users/berin/Documents/GitHub/brico/src/types/review.types.ts)",
+      "Bash(node -e ' *)",
+      "Bash(python3)",
+      "Bash(sed -i 's/const { data: availability } = useAvailability\\(\\\\n        hairdresserId || undefined,\\\\n        date || undefined\\\\n    \\)/const { data: availability } = useAvailability\\(undefined, hairdresserId || undefined, date || undefined, 30\\)/' /c/Users/berin/Documents/GitHub/brico/src/components/AddAppointmentModal.tsx)",
+      "Bash(curl -s http://localhost:8080/api/notifications -H \"Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiZW1haWwiOiJrbGlqZW50MUBleGFtcGxlLmNvbSIsInJvbGUiOiJDTElFTlQiLCJpYXQiOjE3Nzc4NzA0NjIsImV4cCI6MTc3Nzg3MTM2Mn0.Bm6i6bvQHPvXqjM1Hy-kcq7nrm3F0o0MLvLnr2BShMSmKvicWl8mRkF3V2z67JML\")",
+      "Bash(curl -s http://localhost:8087/api/notifications)",
+      "Bash(curl -s -X POST http://localhost:8080/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"klijent1@example.com\",\"password\":\"password123\"}')",
+      "Bash(curl -s http://localhost:8082/api/salons/1/working-hours)",
+      "Bash(curl -s -X PUT \"http://localhost:8080/api/salons/1/working-hours/1\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"isDayOff\":false,\"startTime\":\"10:00\",\"endTime\":\"19:00\"}')",
+      "Bash(curl -s -X POST \"http://localhost:8080/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"vlasnik1@brico.ba\",\"password\":\"password123\"}')",
+      "Bash(curl -s -X PUT http://localhost:8080/api/salons/1/working-hours/1 -H 'Content-Type: application/json' -H 'Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIyIiwiZW1haWwiOiJ2bGFzbmlrMUBicmljby5iYSIsInJvbGUiOiJTQUxPTl9PV05FUiIsImlhdCI6MTc3ODQxMDUxMywiZXhwIjoxNzc4NDExNDEzfQ.LaO02bfdF9reP8C5cMhNdThdvwcfAaZ0YdNpAsLYwQr3jbR0OcYeXGTjHum1QYCr' -d '{\"isDayOff\":false,\"startTime\":\"10:00\",\"endTime\":\"19:00\"}')",
+      "Bash(curl -s \"http://localhost:8080/api/salons/1/working-hours\")",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(f'day={d[\\\\\"dayOfWeek\\\\\"]} off={d[\\\\\"isDayOff\\\\\"]} start={d.get\\(\\\\\"startTime\\\\\"\\)} end={d.get\\(\\\\\"endTime\\\\\"\\)}'\\) for d in data]\")",
+      "Bash(curl -v \"http://localhost:8080/api/salons/1/working-hours\")"
     ]
   }
 }

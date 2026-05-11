@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useAuthStore } from "../../store/authStore"
 import { useCancelAppointment, useMyAppointments } from "../../hooks/useBooking";
 import { useFavorites } from "../../hooks/useSalons";
+import { useQuery } from "@tanstack/react-query";
+import { reviewService } from "../../services/review.service";
 import { formatDate, formatTime, isAppointmentPast } from "../../utils/dateUtils";
 import StatCard from "../../components/StatCard";
 import { Calendar, Clock, Scissors, Star } from "lucide-react";
@@ -22,6 +24,15 @@ export default function ClientDashboard() {
     const { data: favorites = [] } = useFavorites();
 
     const cancelAppointment = useCancelAppointment();
+
+    // Dohvati appointmentId-eve za koje klijent već ima recenziju
+    const { data: myReviews = [] } = useQuery({
+        queryKey: ['my-reviews', user?.id],
+        queryFn:  () => user ? reviewService.getClientReviews(user.id) : Promise.resolve([]),
+        enabled:  !!user,
+        staleTime: 1000 * 60 * 5,
+    })
+    const reviewedAppointmentIds = new Set(myReviews.map((r: any) => r.appointmentId).filter(Boolean))
 
 
     const upcoming = appointments.filter((a) =>
@@ -116,6 +127,7 @@ export default function ClientDashboard() {
                   appointment={appt}
                   onCancel={() => cancelAppointment.mutate(appt.id)}
                   isPast={isAppointmentPast(appt.endTime)}
+                  alreadyReviewed={reviewedAppointmentIds.has(appt.id)}
                 />
               </motion.div>
             ))}

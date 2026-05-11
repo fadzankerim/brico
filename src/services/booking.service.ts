@@ -22,6 +22,9 @@ export const bookingService = {
   cancel: (id: number) =>
     api.patch(`/appointments/${id}/cancel`),
 
+  getHairdresserAppointments: (hairdresserId: number) =>
+    api.get<Appointment[]>('/appointments', { params: { hairdresserId } }).then(r => r.data),
+
   getSalonAppointments: (salonId: number, params?: { from?: string; to?: string }) =>
     api.get<Appointment[]>('/appointments', { params: { salonId, ...params } }).then((r) => r.data),
 

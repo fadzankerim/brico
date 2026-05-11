@@ -24,13 +24,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 — logout + redirect
+// Handle 401 — redirect samo ako je korisnik bio prijavljen
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
+      const wasLoggedIn = !!useAuthStore.getState().token
       useAuthStore.getState().logout()
-      window.location.href = '/login'
+      // Redirect samo ako je korisnik bio prijavljen — izbjegava flash pri logout-u
+      if (wasLoggedIn) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

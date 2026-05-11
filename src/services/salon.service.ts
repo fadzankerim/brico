@@ -1,6 +1,18 @@
 import { api } from './api'
 import type { SalonSearchParams, SalonSearchResponse, Salon, Hairdresser, Service, SalonPhoto } from '../types/salon.typs'
 
+export interface HairdresserProfile {
+  id:         number
+  userId:     number
+  salonId:    number
+  fullName:   string
+  bio?:       string
+  specialties?: string
+  profilePhoto?: string
+  isActive:   boolean
+  avgRating:  number
+}
+
 export const salonService = {
   search: (params: SalonSearchParams) =>
     api.get<SalonSearchResponse>('/salons/paged', { params }).then((r) => r.data),
@@ -13,6 +25,9 @@ export const salonService = {
 
   getByOwner: (ownerId: number) =>
     api.get<Salon[]>(`/salons/owner/${ownerId}`).then((r) => r.data),
+
+  getMyHairdresserProfile: () =>
+    api.get<HairdresserProfile>('/salons/hairdresser-profile').then((r) => r.data),
 
   create: (data: Partial<Salon> & { ownerId?: number }) =>
     api.post<Salon>('/salons', data).then((r) => r.data),
@@ -45,6 +60,23 @@ export const salonService = {
 
   removeHairdresser: (salonId: number, hairdresserId: number) =>
     api.delete(`/salons/${salonId}/hairdressers/${hairdresserId}`),
+
+  // Unavailability
+  getUnavailability: (salonId: number, hairdresserId: number) =>
+    api.get<any[]>(`/salons/${salonId}/hairdressers/${hairdresserId}/unavailability`).then(r => r.data),
+
+  addUnavailability: (salonId: number, hairdresserId: number, data: { startTime: string; endTime: string; reason?: string }) =>
+    api.post<any>(`/salons/${salonId}/hairdressers/${hairdresserId}/unavailability`, data).then(r => r.data),
+
+  deleteUnavailability: (salonId: number, hairdresserId: number, id: number) =>
+    api.delete(`/salons/${salonId}/hairdressers/${hairdresserId}/unavailability/${id}`),
+
+  // Working Hours
+  getWorkingHours: (salonId: number) =>
+    api.get<any[]>(`/salons/${salonId}/working-hours`).then(r => r.data),
+
+  updateWorkingHours: (salonId: number, dayOfWeek: number, data: { startTime?: string; endTime?: string; isDayOff: boolean }) =>
+    api.put<any>(`/salons/${salonId}/working-hours/${dayOfWeek}`, data).then(r => r.data),
 
   // Services
   getServices: (salonId: number) =>

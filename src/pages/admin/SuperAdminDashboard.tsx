@@ -255,7 +255,7 @@ export default function SuperAdminDashboard() {
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => [`${v} salona`]} />
+                  <Tooltip formatter={(v: any) => [`${v} salona`]} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-2 mt-2">
@@ -605,7 +605,7 @@ export default function SuperAdminDashboard() {
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => [`${v} salona`]} />
+                  <Tooltip formatter={(v: any) => [`${v} salona`]} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

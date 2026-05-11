@@ -17,6 +17,7 @@ public class RabbitConfig {
     public static final String APPOINTMENT_CREATED_KEY  = "appointment.created";
     public static final String SLOT_RESERVED_KEY        = "salon.slot.reserved";
     public static final String SLOT_REJECTED_KEY        = "salon.slot.rejected";
+    public static final String NOTIFICATION_KEY         = "notification.push";
 
     // Queues koje booking-service SLUŠA
     public static final String SLOT_RESERVED_QUEUE = "slot.reserved.queue";
