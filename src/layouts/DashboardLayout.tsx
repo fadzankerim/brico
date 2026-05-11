@@ -34,6 +34,7 @@ const HAIRDRESSER_NAV: NavItem[] = [
 const CLIENT_NAV: NavItem[] = [
   { label: 'Termini',  href: '/dashboard',  icon: CalendarDays },
   { label: 'Omiljeni', href: '/favorites',  icon: Heart        },
+  { label: 'Saloni',   href: '/salons',     icon: Building2    },
   { label: 'Postavke', href: '/settings',   icon: Settings     },
 ]
 
@@ -177,9 +178,11 @@ export default function DashboardLayout() {
             <p className="text-sm text-slate-400">{roleLabel} · {user?.fullName}</p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors">
+            <button
+              title="Notifikacije — uskoro dostupno"
+              className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
+            >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
             </button>
           </div>
         </header>

@@ -1,8 +1,10 @@
 package ba.unsa.etf.nwt.salonservice.controller;
 
 import ba.unsa.etf.nwt.salonservice.dto.*;
+import ba.unsa.etf.nwt.salonservice.repository.BookedSlotRepository;
 import ba.unsa.etf.nwt.salonservice.service.SalonMgmtService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +30,8 @@ import java.util.Map;
 @Tag(name = "Salons", description = "Upravljanje salonima")
 public class SalonController {
 
-    private final SalonMgmtService salonService;
+    private final SalonMgmtService      salonService;
+    private final BookedSlotRepository  bookedSlotRepository;
 
     @GetMapping
     @Operation(summary = "Dohvati sve salone")
@@ -34,9 +42,24 @@ public class SalonController {
     // ── Paginacija + sortiranje ────────────────────────────────────────
 
     @GetMapping("/paged")
-    @Operation(summary = "Dohvati salone sa paginacijom i sortiranjem")
+    @Operation(summary = "Dohvati salone sa paginacijom, filtriranjem i sortiranjem")
     public ResponseEntity<Page<SalonResponse>> getAllPaged(
-            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) String q,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 12, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+
+        if (q != null && !q.isBlank()) {
+            return ResponseEntity.ok(salonService.search(q, pageable));
+        }
+        if (city != null || minRating != null) {
+            List<SalonResponse> filtered = salonService.searchByCityAndRating(city, minRating);
+            int start = (int) pageable.getOffset();
+            int end   = Math.min(start + pageable.getPageSize(), filtered.size());
+            List<SalonResponse> pageContent = start >= filtered.size() ? List.of() : filtered.subList(start, end);
+            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filtered.size()));
+        }
         return ResponseEntity.ok(salonService.findAllPaged(pageable));
     }
 
@@ -46,7 +69,8 @@ public class SalonController {
     @Operation(summary = "Pretraži salone po imenu ili gradu")
     public ResponseEntity<Page<SalonResponse>> search(
             @RequestParam String q,
-            @PageableDefault(size = 10, sort = "avgRating", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(hidden = true)
+            @PageableDefault(size = 12, sort = "avgRating", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(salonService.search(q, pageable));
     }
 
@@ -115,6 +139,44 @@ public class SalonController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         salonService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Availability ──────────────────────────────────────────────────
+
+    @GetMapping("/{salonId}/hairdressers/{hairdresserId}/availability")
+    @Operation(summary = "Slobodni termini frizera za određeni datum i trajanje")
+    public ResponseEntity<Map<String, Object>> getAvailability(
+            @PathVariable Long salonId,
+            @PathVariable Long hairdresserId,
+            @RequestParam String date,
+            @RequestParam(defaultValue = "30") int duration) {
+
+        LocalDate day = LocalDate.parse(date);
+        LocalDateTime dayStart = day.atTime(8, 0);
+        LocalDateTime dayEnd   = day.atTime(20, 0);
+
+        List<Map<String, Object>> slots = new ArrayList<>();
+        LocalDateTime current = dayStart;
+
+        while (!current.plusMinutes(duration).isAfter(dayEnd)) {
+            LocalDateTime slotEnd = current.plusMinutes(duration);
+            boolean conflict = bookedSlotRepository.existsConflict(
+                    hairdresserId, current, slotEnd,
+                    ba.unsa.etf.nwt.salonservice.model.BookedSlot.SlotStatus.RESERVED);
+
+            Map<String, Object> slot = new LinkedHashMap<>();
+            slot.put("time", current.toLocalTime().toString());
+            slot.put("available", !conflict);
+            slots.add(slot);
+            current = current.plusMinutes(30);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("date", date);
+        result.put("hairdresserId", hairdresserId);
+        result.put("totalDuration", duration);
+        result.put("slots", slots);
+        return ResponseEntity.ok(result);
     }
 
     // ── Hairdressers ───────────────────────────────────────────────────

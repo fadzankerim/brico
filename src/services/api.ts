@@ -12,9 +12,9 @@ export const api = axios.create({
 
 
 
-// zakomantarisati kasnije!
-import { initMockHandlers } from '../db/handlers.ts'
-initMockHandlers(api)
+// Mock je isključen — koristi se pravi backend na localhost:8080
+// import { initMockHandlers } from '../db/handlers.ts'
+// initMockHandlers(api)
 
 
 // Attach JWT on every request

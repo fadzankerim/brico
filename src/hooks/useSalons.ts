@@ -63,14 +63,17 @@ export function useFavorites() {
 
 export function useToggleFavorite() {
   const queryClient = useQueryClient()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
 
   return useMutation({
-    mutationFn: async ({ salonId, isFavorited }: { salonId: number; isFavorited: boolean }) => {
-      if (!isAuthenticated()) throw new Error('AUTH_REQUIRED')
+    mutationFn: async ({ salon, isFavorited }: {
+      salon: { id: number; name: string; slug: string; city: string; avgRating?: number; verified?: boolean };
+      isFavorited: boolean
+    }) => {
+      if (!isAuthenticated() || !user) throw new Error('AUTH_REQUIRED')
       return isFavorited
-        ? favoritesService.remove(salonId)
-        : favoritesService.add(salonId)
+        ? favoritesService.remove(salon.id)
+        : favoritesService.add(salon, user.id)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: salonKeys.favorites() })

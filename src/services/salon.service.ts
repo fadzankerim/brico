@@ -3,7 +3,7 @@ import type { SalonSearchParams, SalonSearchResponse, Salon, Hairdresser, Servic
 
 export const salonService = {
   search: (params: SalonSearchParams) =>
-    api.get<SalonSearchResponse>('/salons', { params }).then((r) => r.data),
+    api.get<SalonSearchResponse>('/salons/paged', { params }).then((r) => r.data),
 
   getById: (id: number) =>
     api.get<Salon>(`/salons/${id}`).then((r) => r.data),

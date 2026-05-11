@@ -136,7 +136,7 @@ public class ReviewService {
 
     public List<FavoriteResponse> findFavoritesByUser(Long userId) {
         return favoriteRepository.findByUserId(userId).stream()
-                .map(f -> modelMapper.map(f, FavoriteResponse.class)).toList();
+                .map(FavoriteResponse::from).toList();
     }
 
     @Transactional
@@ -147,8 +147,13 @@ public class ReviewService {
         Favorite favorite = Favorite.builder()
                 .userId(req.getUserId())
                 .salonId(req.getSalonId())
+                .salonName(req.getSalonName())
+                .salonSlug(req.getSalonSlug())
+                .salonCity(req.getSalonCity())
+                .salonAvgRating(req.getSalonAvgRating())
+                .salonVerified(req.getSalonVerified())
                 .build();
-        return modelMapper.map(favoriteRepository.save(favorite), FavoriteResponse.class);
+        return FavoriteResponse.from(favoriteRepository.save(favorite));
     }
 
     @Transactional

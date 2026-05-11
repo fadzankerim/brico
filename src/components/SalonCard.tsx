@@ -39,8 +39,8 @@ export default function SalonCard( {salon , className} : SalonCardProps){
 
         setLocalFav((prev) => !prev);
         toggleFavorite.mutate(
-      { salonId: salon.id, isFavorited: localFav },
-      { onError: () => setLocalFav((prev) => !prev) } 
+      { salon: { id: salon.id, name: salon.name, slug: salon.slug, city: salon.city, avgRating: salon.avgRating, verified: salon.verified }, isFavorited: localFav },
+      { onError: () => setLocalFav((prev) => !prev) }
     )
 
     }

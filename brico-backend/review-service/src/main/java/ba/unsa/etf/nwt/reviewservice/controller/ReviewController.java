@@ -107,6 +107,15 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.findFavoritesByUser(userId));
     }
 
+    // Shortcut — koristi X-User-Id header koji gateway ubacuje iz JWT tokena
+    @GetMapping("/favorites")
+    @Operation(summary = "Dohvati omiljene salone prijavljenog korisnika (iz tokena)")
+    public ResponseEntity<List<FavoriteResponse>> getMyFavorites(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        if (userId == null) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(reviewService.findFavoritesByUser(userId));
+    }
+
     @PostMapping("/favorites")
     @Operation(summary = "Dodaj salon u omiljene")
     public ResponseEntity<FavoriteResponse> addFavorite(@Valid @RequestBody FavoriteRequest req) {
@@ -118,6 +127,16 @@ public class ReviewController {
     public ResponseEntity<Void> removeFavorite(@PathVariable Long userId,
                                                 @PathVariable Long salonId) {
         reviewService.removeFavorite(userId, salonId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // Shortcut za brisanje iz favorita po salonId, userId iz tokena
+    @DeleteMapping("/favorites/{salonId}")
+    @Operation(summary = "Ukloni salon iz omiljenih (userId iz tokena)")
+    public ResponseEntity<Void> removeMyFavorite(
+            @PathVariable Long salonId,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        if (userId != null) reviewService.removeFavorite(userId, salonId);
         return ResponseEntity.noContent().build();
     }
 }

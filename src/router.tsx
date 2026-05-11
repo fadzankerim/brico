@@ -114,6 +114,11 @@ export const router = createBrowserRouter([
     ],
   },
 
+  // ── Misc redirects ────────────────────────────────────────────────────────
+  { path: 'settings',    element: <Navigate to="/dashboard" replace /> },
+  { path: 'za-salone',  element: <Navigate to="/register" replace /> },
+  { path: 'profile',    element: <Navigate to="/dashboard" replace /> },
+
   // ── Fallback ───────────────────────────────────────────────────────────────
   { path: '*', element: <Navigate to="/" replace /> },
 ])
