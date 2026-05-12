@@ -27,3 +27,6 @@ dist-ssr
 
 # Java build output
 brico-backend/**/target/
+
+# Claude Code internal files
+.claude/

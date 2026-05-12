@@ -32,7 +32,7 @@ describe('StarRating', () => {
 
   it('disables all buttons in readonly mode', () => {
     render(<StarRating value={3} readonly />)
-    screen.getAllByRole('button').forEach(btn => {
+    screen.getAllByRole('button').forEach((btn: HTMLElement) => {
       expect(btn).toBeDisabled()
     })
   })

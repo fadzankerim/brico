@@ -17,7 +17,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useSalonById } from '../../hooks/useSalons'
 import { useAvailability, useCreateAppointment } from '../../hooks/useBooking'
 import { cn } from '../../lib/utils'
-import { formatDate, formatPrice } from '../../utils/dateUtils'
+import { formatDate, formatPrice, calcEndTime } from '../../utils/dateUtils'
 import type { Appointment } from '../../types/booking.types'
 import BookingSuccessScreen from './BookingSuccessScreen'
 
@@ -58,6 +58,23 @@ export default function BookingPage() {
 
     const totalDur = getTotalDuration()
     const startTime = `${data.selectedDate}T${data.selectedTime}:00`
+    const endTime   = calcEndTime(startTime, totalDur)
+
+    // Snimamo lokalne podatke PRIJE mutate jer reset() čisti store u onSuccess
+    const snap: Appointment = {
+      id: 0, status: 'PENDING',
+      clientId: user.id, clientName: user.fullName ?? '', clientPhone: user.phone ?? '',
+      hairdresserId: data.selectedHairdresser.id, hairdresserName: data.selectedHairdresser.name,
+      salonId: salon.id, salonName: salon.name, salonAddress: salon.address,
+      startTime, endTime,
+      price: getTotalPrice(), totalPrice: getTotalPrice(),
+      serviceId: data.selectedServices[0]?.id ?? 0,
+      serviceName: data.selectedServices[0]?.name ?? '',
+      services: data.selectedServices.map(s => ({ id: s.id, name: s.name, price: s.price, durationMinutes: s.duration } as any)),
+      items:    data.selectedServices.map(s => ({ id: 0, serviceId: s.id, serviceName: s.name, price: s.price, durationMinutes: s.duration } as any)),
+      notes: data.notes ?? '',
+      createdAt: new Date().toISOString(),
+    } as any
 
     createAppointment.mutate(
       {
@@ -78,7 +95,7 @@ export default function BookingPage() {
           durationMinutes: s.duration,
         })),
       } as any,
-      { onSuccess: (appt) => setCompleted(appt) }
+      { onSuccess: (appt: any) => setCompleted({ ...snap, id: appt?.id ?? 0 }) }
     )
   }
 
