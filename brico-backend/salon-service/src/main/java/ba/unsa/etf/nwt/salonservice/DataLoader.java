@@ -11,6 +11,25 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 
+// Hairdresser ID raspored (po redoslijedu ubacivanja, 2 po salonu):
+//  1 → Lejla Mehić      (Elite Cut,      userId=7)
+//  2 → Tarik Bašić      (Elite Cut,      userId=8)
+//  3 → Edin Kovač       (Urban Barber,   userId=9)
+//  4 → Amina Zukić      (Urban Barber,   userId=10)
+//  5 → Nina Softić      (Glam Studio,    userId=11)
+//  6 → Sara Begić       (Glam Studio,    userId=12)
+//  7 → Haris Muratović  (Barber Kingdom, userId=13)
+//  8 → Denis Avdić      (Barber Kingdom, userId=14)
+//  9 → Jovana Nikolić   (Style Lab,      userId=15)
+// 10 → Aleksandar Perić (Style Lab,      userId=16)
+//
+// Service ID raspored (po redoslijedu ubacivanja):
+// Elite Cut:      1=Šišanje, 2=Pranje+Fen, 3=Balayage, 4=Keratin, 5=Brijanje
+// Urban Barber:   6=Muško šišanje, 7=Brijanje, 8=Fade, 9=Dječije
+// Glam Studio:   10=Bojenje, 11=Pramenovi, 12=Šišanje+fen, 13=Braz.keratin
+// Barber Kingdom:14=Klasično, 15=Moderna, 16=Brijanje+maska, 17=Komplet
+// Style Lab:     18=Kreativno bojenje, 19=Šišanje, 20=Kompleksna boja, 21=Fen styling
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -26,121 +45,113 @@ public class DataLoader implements CommandLineRunner {
         if (salonRepository.count() > 0) return;
         log.info("=== Seed: salon-service ===");
 
-        createSalon("Elite Cut", "elite-cut", "Moderan frizerski salon u centru Sarajeva",
-            "Sarajevo", "Titova 1", "+38761100001", 2L, true,
-            new String[]{"Lejla Mehić", "Tarik Bašić", "Amina Hodžić"},
-            new String[]{"Specijalnost: balayage i keratin", "Muško šišanje i brijanje", "Bojanje i pramenovi"},
-            new String[]{"Šišanje", "Pranje + Fen", "Balayage", "Keratin tretman", "Brijanje britvom"},
-            new double[]{15, 10, 80, 120, 18},
-            new int[]{30, 20, 120, 150, 30});
+        // ── 1. Elite Cut ─────────────────────────────────────────────────
+        Salon eliteCut = createSalon("Elite Cut", "elite-cut",
+                "Moderan frizerski salon u centru Sarajeva — specijalnost balayage i keratin tretmani",
+                "Sarajevo", "Titova 1", "+38761100011", 2L, true);
 
-        createSalon("Urban Barber", "urban-barber", "Premium barbershop iskustvo u Mostaru",
-            "Mostar", "Bulevar 12", "+38762200002", 3L, true,
-            new String[]{"Edin Kovač", "Mirza Hadžić"},
-            new String[]{"Specijalnost: fade i skin fade", "Klasično brijanje"},
-            new String[]{"Muško šišanje", "Brijanje britvom", "Fade šišanje", "Dječije šišanje"},
-            new double[]{12, 15, 18, 10},
-            new int[]{30, 30, 45, 20});
+        addHairdresser(eliteCut, 7L,  "Lejla Mehić",  "Specijalnost: balayage, keratin i žensko šišanje",  5.0, 4);
+        addHairdresser(eliteCut, 8L,  "Tarik Bašić",  "Muško šišanje, brijanje i oblikovanje brade",        4.5, 2);
+        addService(eliteCut, "Šišanje",          15, 30);
+        addService(eliteCut, "Pranje + Fen",     10, 20);
+        addService(eliteCut, "Balayage",         80, 120);
+        addService(eliteCut, "Keratin tretman", 120, 150);
+        addService(eliteCut, "Brijanje britvom", 18, 30);
+        addWorkingHours(eliteCut);
 
-        createSalon("Glam Studio", "glam-studio", "Ženski frizerski salon — boja i stilizacija",
-            "Sarajevo", "Ferhadija 22", "+38761300003", 2L, false,
-            new String[]{"Nina Softić", "Sara Begić"},
-            new String[]{"Specijalnost: boja i pramenovi", "Fen i stilizacija"},
-            new String[]{"Bojenje", "Pramenovi", "Šišanje + fen", "Brazilski keratin"},
-            new double[]{50, 70, 20, 100},
-            new int[]{90, 120, 45, 180});
+        // ── 2. Urban Barber ───────────────────────────────────────────────
+        Salon urbanBarber = createSalon("Urban Barber", "urban-barber",
+                "Premium barbershop iskustvo u Mostaru — fade, skin fade i klasično brijanje",
+                "Mostar", "Bulevar 12", "+38762200012", 3L, true);
 
-        createSalon("Barber Kingdom", "barber-kingdom", "Tradicionalni barbershop s modernim pristupom",
-            "Tuzla", "Armijska bb", "+38765400004", 3L, true,
-            new String[]{"Haris Muratović", "Denis Avdić"},
-            new String[]{"Klasično i moderno šišanje", "Brijanje i oblikovanje"},
-            new String[]{"Klasično šišanje", "Moderna frizura", "Brijanje + maska", "Komplet usluga"},
-            new double[]{14, 16, 22, 35},
-            new int[]{30, 35, 45, 75});
+        addHairdresser(urbanBarber, 9L,  "Edin Kovač",   "Specijalnost: fade i skin fade šišanje",   4.0, 2);
+        addHairdresser(urbanBarber, 10L, "Amina Zukić",  "Klasično brijanje i muška njega kose",      5.0, 1);
+        addService(urbanBarber, "Muško šišanje",    12, 30);
+        addService(urbanBarber, "Brijanje britvom", 15, 30);
+        addService(urbanBarber, "Fade šišanje",     18, 45);
+        addService(urbanBarber, "Dječije šišanje",  10, 20);
+        addWorkingHours(urbanBarber);
 
-        createSalon("Style Lab", "style-lab", "Kreativni salon za izražavanje individualnosti",
-            "Banja Luka", "Krajiška 5", "+38765500005", 2L, true,
-            new String[]{"Jovana Nikolić", "Aleksandar Perić"},
-            new String[]{"Kreativne boje i stilovi", "Muške frizure"},
-            new String[]{"Kreativno bojenje", "Šišanje", "Kompleksna boja", "Fen styling"},
-            new double[]{60, 15, 90, 25},
-            new int[]{120, 30, 150, 30});
+        // ── 3. Glam Studio ────────────────────────────────────────────────
+        Salon glamStudio = createSalon("Glam Studio", "glam-studio",
+                "Ženski frizerski salon specijalizovan za boju, pramenove i stilizaciju",
+                "Sarajevo", "Ferhadija 22", "+38761300013", 4L, true);
 
-        createSalon("Lux Hair", "lux-hair", "Luksuzni salon za najzahtjevnije klijente",
-            "Sarajevo", "Skenderija 8", "+38761600006", 3L, true,
-            new String[]{"Valentina Čović", "Marko Ilić"},
-            new String[]{"VIP tretmani i ekskluzivne usluge", "Muški grooming"},
-            new String[]{"VIP paket", "Balayage premium", "Šišanje + styling", "Tretman njege"},
-            new double[]{150, 120, 35, 60},
-            new int[]{180, 150, 60, 90});
+        addHairdresser(glamStudio, 11L, "Nina Softić",  "Specijalnost: bojenje, pramenovi i balayage",   4.0, 2);
+        addHairdresser(glamStudio, 12L, "Sara Begić",   "Fen styling, nadogradnja i posebne frizure",    5.0, 1);
+        addService(glamStudio, "Bojenje",           50,  90);
+        addService(glamStudio, "Pramenovi",         70, 120);
+        addService(glamStudio, "Šišanje + fen",     20,  45);
+        addService(glamStudio, "Brazilski keratin", 100, 180);
+        addWorkingHours(glamStudio);
 
-        createSalon("Fresh Cut", "fresh-cut", "Brzo i kvalitetno šišanje po pristupačnoj cijeni",
-            "Zenica", "Zmaja od Bosne 3", "+38762700007", 2L, false,
-            new String[]{"Adnan Mehić"},
-            new String[]{"Brzo i precizno šišanje"},
-            new String[]{"Šišanje", "Šišanje + brijanje", "Dječije šišanje"},
-            new double[]{10, 18, 8},
-            new int[]{20, 35, 15});
+        // ── 4. Barber Kingdom ─────────────────────────────────────────────
+        Salon barberKingdom = createSalon("Barber Kingdom", "barber-kingdom",
+                "Tradicionalni barbershop s modernim pristupom — brijanje, fade i oblikovanje brade",
+                "Tuzla", "Armijska bb", "+38765400014", 5L, true);
 
-        createSalon("Color Me Beautiful", "color-me-beautiful", "Salon specijalizovan za bojanje kose",
-            "Sarajevo", "Grbavica 14", "+38761800008", 3L, true,
-            new String[]{"Emina Hadžimuratović", "Lejla Begović"},
-            new String[]{"Specijalista za nijanse i tonove", "Balayage ekspert"},
-            new String[]{"Puno bojenje", "Highlights", "Balayage", "Toning", "Farbanje obrva"},
-            new double[]{55, 65, 85, 35, 15},
-            new int[]{90, 100, 120, 45, 20});
+        addHairdresser(barberKingdom, 13L, "Haris Muratović", "Klasično i moderno šišanje, komplet usluge",   4.3, 3);
+        addHairdresser(barberKingdom, 14L, "Denis Avdić",     "Brijanje britvom i hot-towel tretman",         4.0, 2);
+        addService(barberKingdom, "Klasično šišanje",   14, 30);
+        addService(barberKingdom, "Moderna frizura",    16, 35);
+        addService(barberKingdom, "Brijanje + maska",   22, 45);
+        addService(barberKingdom, "Komplet usluga",     35, 75);
+        addWorkingHours(barberKingdom);
 
-        createSalon("The Gentleman", "the-gentleman", "Ekskluzivni muški grooming salon",
-            "Mostar", "Rondo 7", "+38763900009", 2L, true,
-            new String[]{"Stefan Marković", "Ivan Pavlović"},
-            new String[]{"Muški grooming specijalista", "Brade i brkovi ekspert"},
-            new String[]{"Šišanje", "Brijanje britvom", "Oblikovanje brade", "Paket premium"},
-            new double[]{18, 22, 15, 50},
-            new int[]{30, 40, 25, 80});
+        // ── 5. Style Lab ──────────────────────────────────────────────────
+        Salon styleLab = createSalon("Style Lab", "style-lab",
+                "Kreativni salon za izražavanje individualnosti — nestandardne boje i avangardni stilovi",
+                "Banja Luka", "Krajiška 5", "+38765500015", 6L, true);
 
-        createSalon("Scissor Sisters", "scissor-sisters", "Ženski salon s opuštenom atmosferom",
-            "Sarajevo", "Ilidža bb", "+38761000010", 3L, false,
-            new String[]{"Ana Kovačević", "Maja Đukić"},
-            new String[]{"Fen i styling specijalista", "Kratke frizure ekspert"},
-            new String[]{"Fen styling", "Kratke frizure", "Updo frizure", "Nadogradnja noktiju"},
-            new double[]{20, 25, 30, 35},
-            new int[]{30, 45, 60, 90});
+        addHairdresser(styleLab, 15L, "Jovana Nikolić",    "Kreativne boje, fantasy i pastele",              4.0, 1);
+        addHairdresser(styleLab, 16L, "Aleksandar Perić",  "Muške frizure, undercut i kreativni stilovi",    3.0, 1);
+        addService(styleLab, "Kreativno bojenje", 60, 120);
+        addService(styleLab, "Šišanje",           15,  30);
+        addService(styleLab, "Kompleksna boja",   90, 150);
+        addService(styleLab, "Fen styling",       25,  30);
+        addWorkingHours(styleLab);
 
-        log.info("=== Seed završen: {} salona ===", salonRepository.count());
+        log.info("=== Seed završen: {} salona, {} frizera ===",
+                salonRepository.count(), hairdresserRepository.count());
     }
 
-    private void createSalon(String name, String slug, String desc,
-                              String city, String address, String phone,
-                              Long ownerId, boolean verified,
-                              String[] hairdressers, String[] bios,
-                              String[] services, double[] prices, int[] durations) {
-        Salon salon = salonRepository.save(Salon.builder()
+    private Salon createSalon(String name, String slug, String desc,
+                               String city, String address, String phone,
+                               Long ownerId, boolean verified) {
+        return salonRepository.save(Salon.builder()
                 .name(name).slug(slug).description(desc)
                 .city(city).address(address).phone(phone)
-                .ownerId(ownerId).verified(verified).isActive(true).build());
+                .ownerId(ownerId).verified(verified).isActive(true)
+                .build());
+    }
 
-        for (int i = 0; i < hairdressers.length; i++) {
-            hairdresserRepository.save(Hairdresser.builder()
-                    .salon(salon).fullName(hairdressers[i])
-                    .bio(bios[i]).isActive(true).avgRating(0.0).build());
-        }
+    private void addHairdresser(Salon salon, Long userId, String name, String bio,
+                                 double avgRating, int totalAppointments) {
+        hairdresserRepository.save(Hairdresser.builder()
+                .salon(salon)
+                .userId(userId)
+                .fullName(name)
+                .bio(bio)
+                .isActive(true)
+                .avgRating(avgRating)
+                .totalAppointments(totalAppointments)
+                .build());
+    }
 
-        for (int i = 0; i < services.length; i++) {
-            serviceRepository.save(SalonService.builder()
-                    .salon(salon).name(services[i])
-                    .price(BigDecimal.valueOf(prices[i]))
-                    .durationMinutes(durations[i])
-                    .isActive(true).build());
-        }
-
-        addWorkingHours(salon);
+    private void addService(Salon salon, String name, double price, int durationMin) {
+        serviceRepository.save(SalonService.builder()
+                .salon(salon)
+                .name(name)
+                .price(BigDecimal.valueOf(price))
+                .durationMinutes(durationMin)
+                .isActive(true)
+                .build());
     }
 
     private void addWorkingHours(Salon salon) {
         for (DayOfWeek day : DayOfWeek.values()) {
             boolean isDayOff = (day == DayOfWeek.SUNDAY);
-            // Model koristi 0-6 (Mon=0 ... Sun=6), DayOfWeek.getValue() je 1-7
-            int dayIndex = day.getValue() % 7; // Mon=1→1, ..., Sat=6→6, Sun=7→0
+            int dayIndex = day.getValue() % 7;
             workingHoursRepository.save(WorkingHours.builder()
                     .salon(salon).dayOfWeek(dayIndex)
                     .startTime(isDayOff ? null : LocalTime.of(8, 0))
