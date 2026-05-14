@@ -18,6 +18,7 @@ import {
 import { cn } from "../lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import type { LucideIcon } from "lucide-react";
+import { useUnreadCount } from "../hooks/useNotifications";
 
 function DropItem({ icon: Icon, label, onClick, danger }: {
   icon: LucideIcon;
@@ -53,6 +54,7 @@ export default function Navbar(){
   const { user, isAuthenticated } = useAuthStore();
   const logout = useLogout();
   const navigate = useNavigate();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -128,7 +130,9 @@ export default function Navbar(){
               {/* Notification bell */}
               <button className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors">
                 <Bell className="w-4.5 h-4.5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
+                )}
               </button>
  
               {/* Avatar dropdown */}

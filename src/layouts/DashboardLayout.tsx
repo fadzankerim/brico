@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Scissors, LayoutDashboard, CalendarDays, Users, Sparkles,
@@ -11,6 +11,8 @@ import { useAuthStore } from '../store/authStore'
 import { useNotifications, useMarkRead, useMarkAllRead } from '../hooks/useNotifications'
 import { cn } from '../lib/utils'
 import { formatDistanceToNow, parseISO } from 'date-fns'
+import { bs } from 'date-fns/locale'
+import type { Notification } from '../services/notification.service'
 
 
 type NavItem = { label: string; href: string; icon: React.ElementType; tab?: string }
@@ -48,9 +50,26 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Analitika',  href: '/admin/dashboard?tab=analytics',  icon: BarChart3       },
 ]
 
+function getNotificationUrl(n: Notification, role: string | undefined): string {
+  switch (n.type) {
+    case 'APPOINTMENT_CONFIRMED':
+    case 'APPOINTMENT_CANCELLED':
+      return '/dashboard'
+    case 'NEW_APPOINTMENT':
+      return '/owner/dashboard?tab=calendar'
+    case 'NEW_REVIEW':
+      return role === 'HAIRDRESSER' ? '/hairdresser/dashboard' : '/owner/dashboard?tab=overview'
+    default:
+      if (role === 'SALON_OWNER') return '/owner/dashboard'
+      if (role === 'HAIRDRESSER') return '/hairdresser/dashboard'
+      return '/dashboard'
+  }
+}
+
 export default function DashboardLayout() {
   const { user }       = useAuthStore()
   const logout         = useLogout()
+  const navigate       = useNavigate()
   const location       = useLocation()
   const [mobileOpen, setMobileOpen]   = useState(false)
   const [notifOpen, setNotifOpen]     = useState(false)
@@ -231,7 +250,11 @@ export default function DashboardLayout() {
                           notifications.slice(0, 20).map(n => (
                             <div
                               key={n.id}
-                              onClick={() => { if (!n.isRead) markRead.mutate(n.id) }}
+                              onClick={() => {
+                                if (!n.isRead) markRead.mutate(n.id)
+                                setNotifOpen(false)
+                                navigate(getNotificationUrl(n, user?.role))
+                              }}
                               className={cn(
                                 'px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-white/3 transition-colors',
                                 !n.isRead && 'bg-rose-500/5'
@@ -246,7 +269,7 @@ export default function DashboardLayout() {
                                   <p className="text-sm font-medium text-white leading-snug">{n.title}</p>
                                   <p className="text-xs text-slate-400 mt-0.5 leading-snug">{n.message}</p>
                                   <p className="text-xs text-slate-600 mt-1">
-                                    {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true })}
+                                    {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true, locale: bs })}
                                   </p>
                                 </div>
                               </div>
