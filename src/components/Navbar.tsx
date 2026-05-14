@@ -18,7 +18,8 @@ import {
 import { cn } from "../lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import type { LucideIcon } from "lucide-react";
-import { useUnreadCount } from "../hooks/useNotifications";
+import { useNotifications } from "../hooks/useNotifications";
+import { getRoleDashboardHref } from "../utils/roleUtils";
 
 function DropItem({ icon: Icon, label, onClick, danger }: {
   icon: LucideIcon;
@@ -54,7 +55,8 @@ export default function Navbar(){
   const { user, isAuthenticated } = useAuthStore();
   const logout = useLogout();
   const navigate = useNavigate();
-  const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: notifications = [] } = useNotifications();
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -76,12 +78,7 @@ export default function Navbar(){
 
   }, [dropdownOpen])
 
-  const dashboardHref =
-    user?.role === 'SALON_OWNER'
-      ? '/owner/dashboard'
-      : user?.role === 'HAIRDRESSER'
-        ? '/hairdresser/dashboard'
-        : '/dashboard'
+  const dashboardHref = getRoleDashboardHref(user?.role)
 
 
   const initials = user?.fullName ? user?.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U';

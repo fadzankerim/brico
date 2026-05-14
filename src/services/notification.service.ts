@@ -1,8 +1,14 @@
 import { api } from './api'
 
+export type NotificationType =
+  | 'APPOINTMENT_CONFIRMED'
+  | 'APPOINTMENT_CANCELLED'
+  | 'NEW_APPOINTMENT'
+  | 'NEW_REVIEW'
+
 export interface Notification {
   id:          number
-  type:        string
+  type:        NotificationType | string
   title:       string
   message:     string
   referenceId: number | null

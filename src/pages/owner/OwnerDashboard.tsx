@@ -2,9 +2,10 @@ import { useState, useEffect } from "react"
 import { useAuthStore } from "../../store/authStore"
 import type { Appointment } from "../../types/booking.types"
 import type { Salon } from "../../types/salon.typs"
+import type { SubscriptionResponse } from "../../services/salon.service"
 import { useSalonAppointments, useUpdateAppointmentStatus } from "../../hooks/useBooking"
 import { useMySalon, salonKeys } from "../../hooks/useSalons"
-import { CalendarDays, DollarSign, Star, TrendingUp, Users, Building2, Edit2, Check, X, Ban, Clock } from "lucide-react"
+import { CalendarDays, DollarSign, Star, TrendingUp, Users, Building2, Edit2, Check, X, Ban, Clock, Lock, Crown, AlertTriangle } from "lucide-react"
 import StatCard from "../../components/StatCard"
 import { formatPrice, formatTime } from "../../utils/dateUtils"
 import { motion } from "motion/react"
@@ -14,12 +15,16 @@ import StaffManagementPanel from "./StaffManagementPanel"
 import ServiceManagementPanel from "./ServiceManagementPanel"
 import SalonPhotosPanel from "../../components/SalonPhotosPanel"
 import { useSearchParams } from "react-router-dom"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
 import AddAppointmentModal from "../../components/AddAppointmentModal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { salonService } from "../../services/salon.service"
 import { bookingService } from "../../services/booking.service"
 import { toast } from "sonner"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "../../components/ui/alert-dialog"
 
 const DAY_NAMES = ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak', 'Subota', 'Nedjelja']
 
@@ -45,6 +50,38 @@ function buildPieChart(appointments: any[]) {
   return Object.entries(map).slice(0, 5).map(([name, count], i) => ({
     name, value: Math.round((count / total) * 100), color: PIE_COLORS[i % PIE_COLORS.length]
   }))
+}
+
+function buildHairdresserRevenueChart(appointments: any[]) {
+  const map: Record<string, number> = {}
+  appointments.filter(a => a.status === 'COMPLETED').forEach(a => {
+    const name = a.hairdresserName ?? 'Nepoznat'
+    map[name] = (map[name] ?? 0) + (a.totalPrice ?? a.price ?? 0)
+  })
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, revenue]) => ({ name: name.split(' ')[0], revenue: Math.round(revenue) }))
+}
+
+function buildPeakHoursChart(appointments: any[]) {
+  const map: Record<number, number> = {}
+  appointments.forEach(a => {
+    const h = new Date(a.startTime).getHours()
+    map[h] = (map[h] ?? 0) + 1
+  })
+  return Array.from({ length: 24 }, (_, h) => ({ hour: `${h}h`, count: map[h] ?? 0 }))
+    .filter(e => e.count > 0)
+}
+
+function buildDayOfWeekChart(appointments: any[]) {
+  const DAYS = ['Ned', 'Pon', 'Uto', 'Sri', 'Čet', 'Pet', 'Sub']
+  const map: Record<number, number> = {}
+  appointments.forEach(a => {
+    const d = new Date(a.startTime).getDay()
+    map[d] = (map[d] ?? 0) + 1
+  })
+  return [1, 2, 3, 4, 5, 6, 0].map(d => ({ day: DAYS[d], count: map[d] ?? 0 }))
 }
 
 const CITIES = ['Sarajevo', 'Mostar', 'Banja Luka', 'Tuzla', 'Zenica', 'Bijeljina', 'Brčko', 'Trebinje']
@@ -179,7 +216,7 @@ function WorkingHoursEditor({ salonId }: { salonId: number }) {
   )
 }
 
-function SettingsTab({ salon }: { salon: Salon }) {
+function SettingsTab({ salon, subscription }: { salon: Salon; subscription: SubscriptionResponse | undefined }) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
@@ -201,6 +238,16 @@ function SettingsTab({ salon }: { salon: Salon }) {
       setEditing(false)
     },
     onError: () => toast.error('Greška pri čuvanju podataka'),
+  })
+
+  const cancelSubMutation = useMutation({
+    mutationFn: () => salonService.cancelSubscription(salon.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscription', salon.id] })
+      queryClient.invalidateQueries({ queryKey: ['salon-limits', salon.id] })
+      toast.success('Pretplata otkazana. Prebačeni ste na BASIC plan.')
+    },
+    onError: () => toast.error('Greška pri otkazivanju pretplate'),
   })
 
   const field = (label: string, key: keyof typeof form, type: 'input' | 'textarea' | 'select' = 'input') => (
@@ -281,6 +328,88 @@ function SettingsTab({ salon }: { salon: Salon }) {
       </div>
 
       <WorkingHoursEditor salonId={salon.id} />
+
+      {subscription && (
+        <div className="p-5 rounded-2xl bg-[#0F1623] border border-white/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-white text-sm">Pretplata</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Upravljajte vašim planom</p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+              subscription.plan.planType === 'PRO'
+                ? 'bg-rose-500/15 text-rose-400'
+                : 'bg-slate-700/50 text-slate-400'
+            }`}>
+              {subscription.plan.planType}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+              <p className="text-xs text-slate-500 mb-1">Status</p>
+              <p className={`text-sm font-medium ${
+                subscription.status === 'ACTIVE' ? 'text-emerald-400' :
+                subscription.status === 'CANCELLED' ? 'text-red-400' : 'text-amber-400'
+              }`}>
+                {subscription.status === 'ACTIVE' ? 'Aktivan' :
+                 subscription.status === 'CANCELLED' ? 'Otkazan' :
+                 subscription.status === 'TRIAL' ? 'Probni' : subscription.status}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+              <p className="text-xs text-slate-500 mb-1">Cijena</p>
+              <p className="text-sm font-medium text-white">
+                {subscription.plan.monthlyPrice > 0 ? `${subscription.plan.monthlyPrice} KM/mj` : 'Besplatno'}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/3 border border-white/5">
+              <p className="text-xs text-slate-500 mb-1">Aktivna od</p>
+              <p className="text-sm font-medium text-white">
+                {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('bs-BA') : '—'}
+              </p>
+            </div>
+          </div>
+
+          {subscription.plan.planType === 'PRO' && subscription.status === 'ACTIVE' && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm transition-colors">
+                  <AlertTriangle className="w-4 h-4" />
+                  Otkaži pretplatu
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Otkazivanje PRO pretplate</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Nakon otkazivanja, vaš salon će biti prebačen na <strong>BASIC plan</strong> koji uključuje
+                    ograničen broj frizera (maksimalno 3) i nema pristup naprednoj analitici.
+                    Ova akcija se ne može poništiti.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Odustani</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={() => cancelSubMutation.mutate()}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    {cancelSubMutation.isPending ? 'Otkazivanje...' : 'Potvrdi otkazivanje'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
+          {subscription.status === 'CANCELLED' && (
+            <p className="text-xs text-slate-500 text-center">
+              Pretplata je otkazana{subscription.endDate ? ` dana ${new Date(subscription.endDate).toLocaleDateString('bs-BA')}` : ''}.
+              Salon je na BASIC planu.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -297,6 +426,12 @@ export default function OwnerDashboard() {
 
   const { data: salon, isLoading: salonLoading } = useMySalon()
   const { data: appointments = [] } = useSalonAppointments(salon?.id ?? 0)
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription', salon?.id],
+    queryFn: () => salonService.getSubscription(salon!.id),
+    enabled: !!salon?.id,
+    retry: false,
+  })
 
   const cancelMutation = useMutation({
     mutationFn: (id: number) => bookingService.cancel(id),
@@ -315,8 +450,15 @@ export default function OwnerDashboard() {
   const todayAppts  = appointments.filter(a => new Date(a.startTime).toDateString() === todayStr)
   const completed   = appointments.filter(a => a.status === 'COMPLETED')
   const monthrevenue = completed.reduce((sum, a) => sum + (a.totalPrice ?? a.price ?? 0), 0)
-  const revenueChart = buildRevenueChart(appointments)
-  const pieChart     = buildPieChart(appointments)
+  const revenueChart         = buildRevenueChart(appointments)
+  const pieChart             = buildPieChart(appointments)
+  const hairdresserRevChart  = buildHairdresserRevenueChart(appointments)
+  const peakHoursChart       = buildPeakHoursChart(appointments)
+  const dayOfWeekChart       = buildDayOfWeekChart(appointments)
+  const isPro = subscription?.plan?.planType === 'PRO' && subscription?.status === 'ACTIVE'
+  const completionRate = appointments.filter(a => a.status !== 'PENDING').length > 0
+    ? Math.round((completed.length / appointments.filter(a => a.status !== 'PENDING').length) * 100)
+    : 0
 
   const hairdressers = Array.from(
     new Map(appointments.map(a => [
@@ -412,6 +554,7 @@ export default function OwnerDashboard() {
       {/* Analytics */}
       {tab === 'analytics' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          {/* Basic stats — svima dostupno */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Ovaj mjesec" value={formatPrice(monthrevenue)}  icon={DollarSign}   accent="emerald" change={{ value: 15 }} />
             <StatCard label="Termina"     value={completed.length.toString()} icon={CalendarDays} accent="rose"    change={{ value: 8 }} />
@@ -481,13 +624,113 @@ export default function OwnerDashboard() {
               </div>
             </div>
           </div>
+
+          {/* PRO Analytics sekcija */}
+          {isPro ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 pt-2">
+                <Crown className="w-4 h-4 text-rose-400" />
+                <h3 className="font-display font-semibold text-white text-sm">PRO Analitika</h3>
+                <span className="px-2 py-0.5 rounded-full text-xs bg-rose-500/15 text-rose-400 font-medium">PRO</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard label="Stopa završetka" value={`${completionRate}%`} icon={TrendingUp} accent="emerald" />
+                <StatCard label="Ukupni prihod"   value={formatPrice(appointments.filter(a => a.status === 'COMPLETED').reduce((s, a) => s + (a.totalPrice ?? a.price ?? 0), 0))} icon={DollarSign} accent="blue" />
+                <StatCard label="Svi termini"      value={appointments.length.toString()} icon={CalendarDays} accent="rose" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
+                  <h3 className="font-display font-semibold text-white mb-5">Prihod po Frizeru</h3>
+                  {hairdresserRevChart.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={hairdresserRevChart} barSize={28}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
+                        <Tooltip
+                          contentStyle={{ background: '#0F1623', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 13 }}
+                          labelStyle={{ color: '#94a3b8' }}
+                          formatter={(v: unknown) => [`€${v}`, 'Prihod']}
+                        />
+                        <Bar dataKey="revenue" fill="#e94560" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-sm text-slate-500 text-center py-8">Nema podataka o prihodima</p>
+                  )}
+                </div>
+
+                <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
+                  <h3 className="font-display font-semibold text-white mb-5">Termini po Danu</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={dayOfWeekChart} barSize={28}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ background: '#0F1623', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 13 }}
+                        labelStyle={{ color: '#94a3b8' }}
+                        formatter={(v: unknown) => [String(v ?? 0), 'Termina']}
+                      />
+                      <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
+                <h3 className="font-display font-semibold text-white mb-5">Vršni Sati Rezervacija</h3>
+                {peakHoursChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={peakHoursChart} barSize={20}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="hour" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ background: '#0F1623', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 13 }}
+                        labelStyle={{ color: '#94a3b8' }}
+                        formatter={(v: unknown) => [String(v ?? 0), 'Termina']}
+                      />
+                      <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-8">Nema podataka o rezervacijama</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#0F1623] p-8 text-center">
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0F1623]/80" />
+              <div className="relative z-10 flex flex-col items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 flex items-center justify-center">
+                  <Lock className="w-7 h-7 text-rose-400" />
+                </div>
+                <div>
+                  <h3 className="font-display font-semibold text-white mb-1">Napredna analitika</h3>
+                  <p className="text-sm text-slate-500 max-w-xs mx-auto">
+                    Prihod po frizeru, vršni sati rezervacija i distribucija po danima dostupni su isključivo na <strong className="text-slate-300">PRO planu</strong>.
+                  </p>
+                </div>
+                <a
+                  href="/register?plan=PRO"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium transition-colors"
+                >
+                  <Crown className="w-4 h-4" />
+                  Nadogradite na PRO
+                </a>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
       {/* Settings */}
       {tab === 'settings' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <SettingsTab salon={salon} />
+          <SettingsTab salon={salon} subscription={subscription} />
         </motion.div>
       )}
 

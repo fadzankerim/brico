@@ -7,6 +7,7 @@ import {
   parseISO,
   addMinutes,
 } from 'date-fns'
+import { bs } from 'date-fns/locale'
 
 export function formatDate(date: string | Date, pattern = 'dd.MM.yyyy'): string {
   const d = typeof date === 'string' ? parseISO(date) : date
@@ -27,7 +28,7 @@ export function formatRelative(date: string | Date): string {
   const d = typeof date === 'string' ? parseISO(date) : date
   if (isToday(d)) return `Danas u ${format(d, 'HH:mm')}`
   if (isTomorrow(d)) return `Sutra u ${format(d, 'HH:mm')}`
-  return formatDistanceToNow(d, { addSuffix: true })
+  return formatDistanceToNow(d, { addSuffix: true, locale: bs })
 }
 
 export function formatDuration(minutes: number): string {

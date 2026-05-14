@@ -1,6 +1,24 @@
 import { api } from './api'
 import type { SalonSearchParams, SalonSearchResponse, Salon, Hairdresser, Service, SalonPhoto } from '../types/salon.typs'
 
+export interface PlanResponse {
+  id: number
+  planType: 'BASIC' | 'PRO'
+  monthlyPrice: number
+  maxHairdressers: number | null
+}
+
+export interface SubscriptionResponse {
+  id: number
+  salonId: number
+  plan: PlanResponse
+  status: 'ACTIVE' | 'INACTIVE' | 'TRIAL' | 'CANCELLED' | 'PAST_DUE'
+  startDate: string
+  endDate: string | null
+  stripeSubscriptionId?: string
+  createdAt: string
+}
+
 export interface HairdresserProfile {
   id:         number
   userId:     number
@@ -71,9 +89,15 @@ export const salonService = {
   deleteUnavailability: (salonId: number, hairdresserId: number, id: number) =>
     api.delete(`/salons/${salonId}/hairdressers/${hairdresserId}/unavailability/${id}`),
 
-  // Subscription limits
+  // Subscription
   getSalonLimits: (salonId: number) =>
     api.get<{ planType: string; maxHairdressers: number | null }>(`/subscriptions/salon/${salonId}/limits`).then(r => r.data),
+
+  getSubscription: (salonId: number) =>
+    api.get<SubscriptionResponse>(`/subscriptions/salon/${salonId}`).then(r => r.data),
+
+  cancelSubscription: (salonId: number) =>
+    api.patch<SubscriptionResponse>(`/subscriptions/salon/${salonId}/cancel`).then(r => r.data),
 
   // Working Hours
   getWorkingHours: (salonId: number) =>

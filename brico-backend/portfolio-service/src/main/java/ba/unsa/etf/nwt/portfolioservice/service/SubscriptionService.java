@@ -144,10 +144,14 @@ public class SubscriptionService {
     public Map<String, Object> getSalonLimits(Long salonId) {
         Map<String, Object> limits = new LinkedHashMap<>();
         subscriptionRepository.findBySalonId(salonId).ifPresentOrElse(sub -> {
-            limits.put("planType",         sub.getPlan().getPlanType().name());
-            limits.put("maxHairdressers",  sub.getPlan().getMaxHairdressers()); // null = neograničeno
+            if (sub.getStatus() == SubscriptionStatus.CANCELLED) {
+                limits.put("planType",        "BASIC");
+                limits.put("maxHairdressers", 3);
+            } else {
+                limits.put("planType",        sub.getPlan().getPlanType().name());
+                limits.put("maxHairdressers", sub.getPlan().getMaxHairdressers());
+            }
         }, () -> {
-            // Salon bez pretplate → BASIC defaultne vrijednosti
             limits.put("planType",        "BASIC");
             limits.put("maxHairdressers", 3);
         });

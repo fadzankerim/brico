@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
   Scissors, LayoutDashboard, CalendarDays, Users, Sparkles,
@@ -10,8 +10,8 @@ import { useLogout } from '../hooks/useAuth'
 import { useAuthStore } from '../store/authStore'
 import { useNotifications, useMarkRead, useMarkAllRead } from '../hooks/useNotifications'
 import { cn } from '../lib/utils'
-import { formatDistanceToNow, parseISO } from 'date-fns'
-import { bs } from 'date-fns/locale'
+import { formatRelative } from '../utils/dateUtils'
+import { getRoleDashboardHref } from '../utils/roleUtils'
 import type { Notification } from '../services/notification.service'
 
 
@@ -39,7 +39,6 @@ const CLIENT_NAV: NavItem[] = [
   { label: 'Termini',  href: '/dashboard',  icon: CalendarDays },
   { label: 'Omiljeni', href: '/favorites',  icon: Heart        },
   { label: 'Saloni',   href: '/salons',     icon: Building2    },
-  { label: 'Postavke', href: '/settings',   icon: Settings     },
 ]
 
 const ADMIN_NAV: NavItem[] = [
@@ -60,9 +59,7 @@ function getNotificationUrl(n: Notification, role: string | undefined): string {
     case 'NEW_REVIEW':
       return role === 'HAIRDRESSER' ? '/hairdresser/dashboard' : '/owner/dashboard?tab=overview'
     default:
-      if (role === 'SALON_OWNER') return '/owner/dashboard'
-      if (role === 'HAIRDRESSER') return '/hairdresser/dashboard'
-      return '/dashboard'
+      return getRoleDashboardHref(role)
   }
 }
 
@@ -269,7 +266,7 @@ export default function DashboardLayout() {
                                   <p className="text-sm font-medium text-white leading-snug">{n.title}</p>
                                   <p className="text-xs text-slate-400 mt-0.5 leading-snug">{n.message}</p>
                                   <p className="text-xs text-slate-600 mt-1">
-                                    {formatDistanceToNow(parseISO(n.createdAt), { addSuffix: true, locale: bs })}
+                                    {formatRelative(n.createdAt)}
                                   </p>
                                 </div>
                               </div>
