@@ -18,6 +18,10 @@ public interface SalonRepository extends JpaRepository<Salon, Long> {
 
     boolean existsBySlug(String slug);
 
+    boolean existsByIdBroj(String idBroj);
+
+    boolean existsByIdBrojAndIdNot(String idBroj, Long id);
+
     List<Salon> findByCity(String city);
 
     List<Salon> findByIsActive(Boolean isActive);

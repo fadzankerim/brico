@@ -48,7 +48,7 @@ public class DataLoader implements CommandLineRunner {
         // ── 1. Elite Cut ─────────────────────────────────────────────────
         Salon eliteCut = createSalon("Elite Cut", "elite-cut",
                 "Moderan frizerski salon u centru Sarajeva — specijalnost balayage i keratin tretmani",
-                "Sarajevo", "Titova 1", "+38761100011", 2L, true);
+                "Sarajevo", "Titova 1", "+38761100011", 2L, true, "4200111000001");
 
         addHairdresser(eliteCut, 7L,  "Lejla Mehić",  "Specijalnost: balayage, keratin i žensko šišanje",  5.0, 4);
         addHairdresser(eliteCut, 8L,  "Tarik Bašić",  "Muško šišanje, brijanje i oblikovanje brade",        4.5, 2);
@@ -62,7 +62,7 @@ public class DataLoader implements CommandLineRunner {
         // ── 2. Urban Barber ───────────────────────────────────────────────
         Salon urbanBarber = createSalon("Urban Barber", "urban-barber",
                 "Premium barbershop iskustvo u Mostaru — fade, skin fade i klasično brijanje",
-                "Mostar", "Bulevar 12", "+38762200012", 3L, true);
+                "Mostar", "Bulevar 12", "+38762200012", 3L, true, "4200222000002");
 
         addHairdresser(urbanBarber, 9L,  "Edin Kovač",   "Specijalnost: fade i skin fade šišanje",   4.0, 2);
         addHairdresser(urbanBarber, 10L, "Amina Zukić",  "Klasično brijanje i muška njega kose",      5.0, 1);
@@ -75,7 +75,7 @@ public class DataLoader implements CommandLineRunner {
         // ── 3. Glam Studio ────────────────────────────────────────────────
         Salon glamStudio = createSalon("Glam Studio", "glam-studio",
                 "Ženski frizerski salon specijalizovan za boju, pramenove i stilizaciju",
-                "Sarajevo", "Ferhadija 22", "+38761300013", 4L, true);
+                "Sarajevo", "Ferhadija 22", "+38761300013", 4L, true, "4200333000003");
 
         addHairdresser(glamStudio, 11L, "Nina Softić",  "Specijalnost: bojenje, pramenovi i balayage",   4.0, 2);
         addHairdresser(glamStudio, 12L, "Sara Begić",   "Fen styling, nadogradnja i posebne frizure",    5.0, 1);
@@ -88,7 +88,7 @@ public class DataLoader implements CommandLineRunner {
         // ── 4. Barber Kingdom ─────────────────────────────────────────────
         Salon barberKingdom = createSalon("Barber Kingdom", "barber-kingdom",
                 "Tradicionalni barbershop s modernim pristupom — brijanje, fade i oblikovanje brade",
-                "Tuzla", "Armijska bb", "+38765400014", 5L, true);
+                "Tuzla", "Armijska bb", "+38765400014", 5L, true, "4200444000004");
 
         addHairdresser(barberKingdom, 13L, "Haris Muratović", "Klasično i moderno šišanje, komplet usluge",   4.3, 3);
         addHairdresser(barberKingdom, 14L, "Denis Avdić",     "Brijanje britvom i hot-towel tretman",         4.0, 2);
@@ -101,7 +101,7 @@ public class DataLoader implements CommandLineRunner {
         // ── 5. Style Lab ──────────────────────────────────────────────────
         Salon styleLab = createSalon("Style Lab", "style-lab",
                 "Kreativni salon za izražavanje individualnosti — nestandardne boje i avangardni stilovi",
-                "Banja Luka", "Krajiška 5", "+38765500015", 6L, true);
+                "Banja Luka", "Krajiška 5", "+38765500015", 6L, true, "4200555000005");
 
         addHairdresser(styleLab, 15L, "Jovana Nikolić",    "Kreativne boje, fantasy i pastele",              4.0, 1);
         addHairdresser(styleLab, 16L, "Aleksandar Perić",  "Muške frizure, undercut i kreativni stilovi",    3.0, 1);
@@ -117,11 +117,12 @@ public class DataLoader implements CommandLineRunner {
 
     private Salon createSalon(String name, String slug, String desc,
                                String city, String address, String phone,
-                               Long ownerId, boolean verified) {
+                               Long ownerId, boolean verified, String idBroj) {
         return salonRepository.save(Salon.builder()
                 .name(name).slug(slug).description(desc)
                 .city(city).address(address).phone(phone)
                 .ownerId(ownerId).verified(verified).isActive(true)
+                .idBroj(idBroj)
                 .build());
     }
 

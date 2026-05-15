@@ -13,7 +13,10 @@ import java.util.List;
 @Entity
 @Table(
     name = "salons",
-    uniqueConstraints = @UniqueConstraint(name = "uq_salons_slug", columnNames = "slug"),
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_salons_slug",    columnNames = "slug"),
+        @UniqueConstraint(name = "uq_salons_id_broj", columnNames = "id_broj")
+    },
     indexes = {
         @Index(name = "idx_salons_owner",    columnList = "owner_id"),
         @Index(name = "idx_salons_city",     columnList = "city"),
@@ -63,6 +66,11 @@ public class Salon {
 
     @Column(length = 200)
     private String website;
+
+    @NotBlank(message = "Identifikacioni broj je obavezan")
+    @Pattern(regexp = "^\\d{13}$", message = "Identifikacioni broj mora imati tačno 13 cifara")
+    @Column(name = "id_broj", nullable = false, unique = true, length = 13)
+    private String idBroj;
 
     @Column(nullable = false)
     @Builder.Default

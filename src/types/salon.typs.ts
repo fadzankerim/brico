@@ -69,6 +69,7 @@ export interface Salon {
   longitude?: number
   phone?: string
   website?: string
+  idBroj?: string
   avgRating: number
   reviewCount: number
   verified: boolean

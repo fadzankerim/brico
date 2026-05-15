@@ -226,6 +226,7 @@ function SettingsTab({ salon, subscription }: { salon: Salon; subscription: Subs
     address:     salon.address,
     phone:       salon.phone ?? '',
     website:     salon.website ?? '',
+    idBroj:      salon.idBroj ?? '',
   })
 
   const updateMutation = useMutation({
@@ -291,7 +292,7 @@ function SettingsTab({ salon, subscription }: { salon: Salon; subscription: Subs
         {editing ? (
           <div className="flex gap-2">
             <button
-              onClick={() => { setEditing(false); setForm({ name: salon.name, description: salon.description ?? '', city: salon.city, address: salon.address, phone: salon.phone ?? '', website: salon.website ?? '' }) }}
+              onClick={() => { setEditing(false); setForm({ name: salon.name, description: salon.description ?? '', city: salon.city, address: salon.address, phone: salon.phone ?? '', website: salon.website ?? '', idBroj: salon.idBroj ?? '' }) }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-slate-400 hover:text-white text-sm transition-colors"
             >
               <X className="w-4 h-4" /> Odustani
@@ -324,6 +325,18 @@ function SettingsTab({ salon, subscription }: { salon: Salon; subscription: Subs
         <div className="grid grid-cols-2 gap-4">
           {field('Telefon', 'phone')}
           {field('Web stranica', 'website')}
+        </div>
+        <div>
+          <label className="text-xs text-slate-500 uppercase tracking-wide mb-1.5 block">Identifikacioni / PDV broj</label>
+          <input
+            disabled={!editing}
+            value={form.idBroj}
+            onChange={e => setForm(f => ({ ...f, idBroj: e.target.value.replace(/\D/g, '').slice(0, 13) }))}
+            inputMode="numeric"
+            placeholder="4200000000000"
+            className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50 transition-all disabled:opacity-50"
+          />
+          <p className="text-xs text-slate-600 mt-1">13 cifara · jedinstven identifikator salona</p>
         </div>
       </div>
 

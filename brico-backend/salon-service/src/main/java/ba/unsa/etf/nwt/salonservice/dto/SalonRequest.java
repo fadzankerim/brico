@@ -33,6 +33,10 @@ public class SalonRequest {
     @Size(max = 200)
     private String website;
 
+    @NotBlank(message = "Identifikacioni broj je obavezan")
+    @Pattern(regexp = "^\\d{13}$", message = "Identifikacioni broj mora imati tačno 13 cifara")
+    private String idBroj;
+
     @NotNull(message = "OwnerId je obavezan")
     private Long ownerId;
 }

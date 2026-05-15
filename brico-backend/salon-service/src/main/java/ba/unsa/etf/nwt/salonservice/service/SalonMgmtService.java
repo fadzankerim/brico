@@ -2,6 +2,7 @@ package ba.unsa.etf.nwt.salonservice.service;
 
 import ba.unsa.etf.nwt.salonservice.client.PortfolioClient;
 import ba.unsa.etf.nwt.salonservice.dto.*;
+import ba.unsa.etf.nwt.salonservice.exception.DuplicateResourceException;
 import ba.unsa.etf.nwt.salonservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.salonservice.model.*;
 import ba.unsa.etf.nwt.salonservice.repository.*;
@@ -71,6 +72,10 @@ public class SalonMgmtService {
 
     @Transactional
     public SalonResponse create(SalonRequest req) {
+        if (salonRepository.existsByIdBroj(req.getIdBroj())) {
+            throw new DuplicateResourceException(
+                "Salon sa identifikacionim brojem " + req.getIdBroj() + " već postoji.");
+        }
         String slug = generateSlug(req.getName());
         if (salonRepository.existsBySlug(slug)) {
             slug = slug + "-" + System.currentTimeMillis();
@@ -85,6 +90,13 @@ public class SalonMgmtService {
     @Transactional
     public SalonResponse update(Long id, SalonRequest req) {
         Salon salon = getSalonOrThrow(id);
+        if (req.getIdBroj() != null && !req.getIdBroj().equals(salon.getIdBroj())) {
+            if (salonRepository.existsByIdBrojAndIdNot(req.getIdBroj(), id)) {
+                throw new DuplicateResourceException(
+                    "Identifikacioni broj " + req.getIdBroj() + " već koristi drugi salon.");
+            }
+            salon.setIdBroj(req.getIdBroj());
+        }
         if (req.getName()        != null) salon.setName(req.getName());
         if (req.getDescription() != null) salon.setDescription(req.getDescription());
         if (req.getCity()        != null) salon.setCity(req.getCity());

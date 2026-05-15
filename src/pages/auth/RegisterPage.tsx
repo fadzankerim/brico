@@ -23,6 +23,7 @@ interface SalonDraft {
   phone: string
   description: string
   website: string
+  idBroj: string
 }
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
@@ -170,6 +171,31 @@ function SalonStep({
       </div>
 
       {field('website', 'Website', Globe, { placeholder: 'https://vasisalon.ba', type: 'url' })}
+
+      <div>
+        <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          Identifikacioni / PDV broj *
+        </label>
+        <div className="relative">
+          <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            value={data.idBroj}
+            onChange={e => onChange('idBroj', e.target.value.replace(/\D/g, '').slice(0, 13))}
+            placeholder="4200000000000 (13 cifara)"
+            inputMode="numeric"
+            className={cn(
+              'w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border text-white placeholder:text-slate-600 text-sm font-mono focus:outline-none focus:ring-2 transition-all',
+              errors.idBroj
+                ? 'border-rose-500/50 focus:border-rose-500/50 focus:ring-rose-500/15'
+                : 'border-white/8 focus:border-rose-500/50 focus:ring-rose-500/15'
+            )}
+          />
+        </div>
+        {errors.idBroj
+          ? <p className="text-rose-400 text-xs mt-1">{errors.idBroj}</p>
+          : <p className="text-slate-600 text-xs mt-1">Jedinstveni identifikacioni broj vašeg poslovnog subjekta</p>
+        }
+      </div>
 
       <div className="flex gap-3 pt-1">
         <button
@@ -458,7 +484,7 @@ export default function RegisterPage() {
   const [proActivated, setProActivated] = useState(false)
   const [salonErrors, setSalonErrors]   = useState<Partial<Record<keyof SalonDraft, string>>>({})
   const [salonData, setSalonData]       = useState<SalonDraft>({
-    name: '', city: '', address: '', phone: '', description: '', website: '',
+    name: '', city: '', address: '', phone: '', description: '', website: '', idBroj: '',
   })
 
   const { mutate: register_, isPending } = useRegister()
@@ -483,6 +509,7 @@ export default function RegisterPage() {
     if (!salonData.name.trim())    errs.name    = 'Naziv salona je obavezan'
     if (!salonData.city)           errs.city    = 'Grad je obavezan'
     if (!salonData.address.trim()) errs.address = 'Adresa je obavezna'
+    if (!/^\d{13}$/.test(salonData.idBroj)) errs.idBroj = 'Identifikacioni broj mora imati tačno 13 cifara'
     if (Object.keys(errs).length) { setSalonErrors(errs); return }
     setSalonErrors({})
     setStep(3)
@@ -501,6 +528,7 @@ export default function RegisterPage() {
           phone:       salonData.phone || undefined,
           description: salonData.description || undefined,
           website:     salonData.website || undefined,
+          idBroj:      salonData.idBroj,
         },
       }),
     })

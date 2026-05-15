@@ -14,6 +14,7 @@ export interface OwnerRegisterData extends RegisterRequest {
     phone?: string
     description?: string
     website?: string
+    idBroj: string
   }
 }
 

@@ -16,6 +16,7 @@ public class SalonResponse {
     private Double longitude;
     private String phone;
     private String website;
+    private String idBroj;
     private Boolean verified;
     private Boolean isActive;
     private Long ownerId;
