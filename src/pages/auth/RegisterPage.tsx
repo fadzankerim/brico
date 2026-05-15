@@ -521,6 +521,7 @@ export default function RegisterPage() {
     register_({
       ...formData,
       ...(isSalonOwner && {
+        planType: selectedPlan,
         salonData: {
           name:        salonData.name,
           city:        salonData.city,

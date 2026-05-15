@@ -96,6 +96,12 @@ export const salonService = {
   getSubscription: (salonId: number) =>
     api.get<SubscriptionResponse>(`/subscriptions/salon/${salonId}`).then(r => r.data),
 
+  createSubscription: (salonId: number, planType: 'BASIC' | 'PRO') =>
+    api.post<SubscriptionResponse>('/subscriptions', { salonId, planType }).then(r => r.data),
+
+  changePlan: (salonId: number, planType: 'BASIC' | 'PRO') =>
+    api.patch<SubscriptionResponse>(`/subscriptions/salon/${salonId}/plan`, null, { params: { planType } }).then(r => r.data),
+
   cancelSubscription: (salonId: number) =>
     api.patch<SubscriptionResponse>(`/subscriptions/salon/${salonId}/cancel`).then(r => r.data),
 

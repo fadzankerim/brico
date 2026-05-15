@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore'
 import type { LoginRequest, RegisterRequest } from '../types/user.types'
 
 export interface OwnerRegisterData extends RegisterRequest {
+  planType?: 'BASIC' | 'PRO'
   salonData?: {
     name: string
     city: string
@@ -53,7 +54,7 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: async (data: OwnerRegisterData) => {
-      const { salonData, confirmPassword: _, ...userFields } = data as any
+      const { salonData, planType, confirmPassword: _, ...userFields } = data as any
       if (userFields.phone === '') userFields.phone = undefined
       const res = await authService.register(userFields)
 
@@ -61,6 +62,7 @@ export function useRegister() {
         // Spremi token odmah da bi salonService.create mogao koristiti Authorization header
         useAuthStore.getState().setAuth(res.user, res.accessToken)
         const salon = await salonService.create({ ...salonData, ownerId: res.user.id })
+        await salonService.createSubscription(salon.id, planType ?? 'BASIC')
         return { ...res, createdSalonId: salon.id }
       }
       return { ...res, createdSalonId: null }
