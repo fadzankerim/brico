@@ -467,6 +467,7 @@ export default function OwnerDashboard() {
       const hairdresser = hairdressers.find(h => h.id === data.hairdresserId)
       const service     = services.find(s => s.id === data.serviceId)
       return bookingService.create({
+        clientId:        user?.id,
         clientName:      data.clientName ?? 'Gost',
         clientPhone:     data.clientPhone,
         hairdresserId:   data.hairdresserId,

@@ -111,6 +111,7 @@ export default function HairdresserDashboard() {
     mutationFn: (data: { hairdresserId: number; serviceId: number; startTime: string; notes?: string; clientName?: string; clientPhone?: string }) => {
       const service = services.find((s: any) => s.id === data.serviceId)
       return bookingService.create({
+        clientId:        user?.id,
         clientName:      data.clientName ?? 'Gost',
         clientPhone:     data.clientPhone,
         hairdresserId:   data.hairdresserId,
