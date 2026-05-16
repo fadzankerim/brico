@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { CalendarDays, Clock, DollarSign, Star, TrendingUp, Ban, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Clock, DollarSign, Star, TrendingUp, Ban, Plus, Trash2, Scissors } from "lucide-react";
 import StatCard from "../../components/StatCard";
 import { useAuthStore } from "../../store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { salonService } from "../../services/salon.service";
 import { bookingService } from "../../services/booking.service";
+import { appointmentKeys } from "../../hooks/useBooking";
 import { toast } from "sonner";
 import { formatDate, formatPrice, formatTime, isAppointmentPast } from "../../utils/dateUtils";
 import { motion } from "motion/react";
@@ -36,6 +37,9 @@ export default function HairdresserDashboard() {
   const [unavailStart, setUnavailStart] = useState('');
   const [unavailEnd,   setUnavailEnd]   = useState('');
   const [unavailReason, setUnavailReason] = useState('');
+  const [svcName, setSvcName]         = useState('');
+  const [svcPrice, setSvcPrice]       = useState('');
+  const [svcDuration, setSvcDuration] = useState('');
 
   // Dohvati hairdresser profil za prijavljenog korisnika
   const { data: hairdresserProfile } = useQuery({
@@ -51,6 +55,20 @@ export default function HairdresserDashboard() {
     queryFn:  () => bookingService.getHairdresserAppointments(hairdresserProfile!.id),
     enabled:  !!hairdresserProfile?.id,
     staleTime: 1000 * 60,
+  })
+
+  const { data: services = [] } = useQuery({
+    queryKey: ['services', hairdresserProfile?.salonId],
+    queryFn:  () => salonService.getServices(hairdresserProfile!.salonId),
+    enabled:  !!hairdresserProfile?.salonId,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const { data: salonInfo } = useQuery({
+    queryKey: ['salon', hairdresserProfile?.salonId],
+    queryFn:  () => salonService.getById(hairdresserProfile!.salonId),
+    enabled:  !!hairdresserProfile?.salonId,
+    staleTime: 1000 * 60 * 5,
   })
   const [searchParams] = useSearchParams();
   const search = searchParams.get('tab') ?? 'overview';
@@ -89,6 +107,52 @@ export default function HairdresserDashboard() {
     onError: () => toast.error('Greška pri otkazivanju'),
   })
 
+  const createAppt = useMutation({
+    mutationFn: (data: { hairdresserId: number; serviceId: number; startTime: string; notes?: string; clientName?: string; clientPhone?: string }) => {
+      const service = services.find((s: any) => s.id === data.serviceId)
+      return bookingService.create({
+        clientName:      data.clientName ?? 'Gost',
+        clientPhone:     data.clientPhone,
+        hairdresserId:   data.hairdresserId,
+        hairdresserName: user?.fullName ?? '',
+        salonId:         hairdresserProfile!.salonId,
+        salonName:       salonInfo?.name ?? '',
+        salonAddress:    salonInfo?.address,
+        startTime:       data.startTime,
+        notes:           data.notes,
+        items: service ? [{ serviceId: service.id, serviceName: service.name, price: service.price, durationMinutes: service.durationMinutes }] : [],
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.all })
+      setAddModal(false)
+      setEditTarget(null)
+      toast.success('Termin kreiran')
+    },
+    onError: () => toast.error('Greška pri kreiranju termina'),
+  })
+
+  const addService = useMutation({
+    mutationFn: () => salonService.addService(hairdresserProfile!.salonId, {
+      name: svcName, price: Number(svcPrice), durationMinutes: Number(svcDuration),
+    } as any),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services', hairdresserProfile?.salonId] })
+      toast.success('Usluga dodana')
+      setSvcName(''); setSvcPrice(''); setSvcDuration('')
+    },
+    onError: () => toast.error('Greška pri dodavanju usluge'),
+  })
+
+  const deleteService = useMutation({
+    mutationFn: (id: number) => salonService.deleteService(hairdresserProfile!.salonId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services', hairdresserProfile?.salonId] })
+      toast.success('Usluga uklonjena')
+    },
+    onError: () => toast.error('Greška pri uklanjanju usluge'),
+  })
+
   const today = new Date().toDateString();
   const todayAppts = appointments.filter((a) => new Date(a.startTime).toDateString() === today && a.status !== 'CANCELLED');
   const upcoming = appointments.filter((a) => !isAppointmentPast(a.endTime) && a.status !== 'CANCELLED');
@@ -118,11 +182,11 @@ export default function HairdresserDashboard() {
     name, value: Math.round((count / total) * 100), color: PIE_COLORS_H[i]
   }))
 
-  const hairdressers = user ? [{
-    id: user.id || 1,
-    userId: user.id || 1,
-    fullName: user.fullName || "Frizer",
-    isActive: true
+  const hairdressers = hairdresserProfile ? [{
+    id: hairdresserProfile.id,
+    userId: user?.id || 1,
+    fullName: user?.fullName || "Frizer",
+    isActive: true,
   }] : [];
 
   return (
@@ -315,13 +379,90 @@ export default function HairdresserDashboard() {
         </motion.div>
       )}
 
-      {/* Unavailability (settings tab) */}
+      {/* Settings tab */}
       {search === 'settings' && hairdresserProfile && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl space-y-6">
-          <div>
-            <h3 className="font-semibold text-white mb-1">Moja nedostupnost</h3>
-            <p className="text-xs text-slate-500">Dodaj periode kada nisi dostupan — mušterije neće moći zakazivati u tim terminima.</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl space-y-8">
+
+          {/* ── Usluge ── */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-white mb-1">Usluge salona</h3>
+              <p className="text-xs text-slate-500">Dodaj ili ukloni usluge koje salon nudi klijentima.</p>
+            </div>
+
+            {/* Add service form */}
+            <div className="p-5 rounded-2xl bg-[#0F1623] border border-white/5 space-y-4">
+              <h4 className="text-sm font-medium text-white">Dodaj novu uslugu</h4>
+              <div className="grid grid-cols-1 gap-3">
+                <input
+                  type="text"
+                  value={svcName}
+                  onChange={e => setSvcName(e.target.value)}
+                  placeholder="Naziv usluge (npr. Šišanje)"
+                  className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Cijena (KM)</label>
+                    <input
+                      type="number"
+                      value={svcPrice}
+                      onChange={e => setSvcPrice(e.target.value)}
+                      placeholder="15"
+                      min="0"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Trajanje (min)</label>
+                    <input
+                      type="number"
+                      value={svcDuration}
+                      onChange={e => setSvcDuration(e.target.value)}
+                      placeholder="30"
+                      min="5"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50"
+                    />
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => addService.mutate()}
+                disabled={!svcName.trim() || !svcPrice || !svcDuration || addService.isPending}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Dodaj uslugu
+              </button>
+            </div>
+
+            {/* Existing services */}
+            {services.length > 0 && (
+              <div className="space-y-2">
+                {services.map((s: any) => (
+                  <div key={s.id} className="flex items-center gap-3 p-4 rounded-xl bg-[#0F1623] border border-white/5">
+                    <Scissors className="w-4 h-4 text-rose-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white">{s.name}</p>
+                      <p className="text-xs text-slate-500">{s.durationMinutes} min · {s.price} KM</p>
+                    </div>
+                    <button
+                      onClick={() => deleteService.mutate(s.id)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* ── Nedostupnost ── */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-white mb-1">Moja nedostupnost</h3>
+              <p className="text-xs text-slate-500">Dodaj periode kada nisi dostupan — mušterije neće moći zakazivati u tim terminima.</p>
+            </div>
 
           {/* Add new */}
           <div className="p-5 rounded-2xl bg-[#0F1623] border border-white/5 space-y-4">
@@ -367,16 +508,19 @@ export default function HairdresserDashboard() {
               ))}
             </div>
           )}
+          </div>{/* end nedostupnost */}
         </motion.div>
       )}
 
       <AddAppointmentModal
         open={addModalOpen}
         onClose={() => { setAddModal(false); setEditTarget(null); }}
-        onSave={() => { setAddModal(false); setEditTarget(null); }}
+        onSave={(data) => createAppt.mutate(data)}
         hairdressers={hairdressers as any}
-        services={[]}
+        services={services}
+        salonId={hairdresserProfile?.salonId}
         editAppointment={editTarget}
+        isSaving={createAppt.isPending}
       />
     </div>
   );

@@ -63,11 +63,24 @@ export interface Appointment {
 
 
  
+export interface AppointmentItemRequest {
+  serviceId:       number
+  serviceName:     string
+  price:           number
+  durationMinutes: number
+}
+
 export interface CreateAppointmentRequest {
-  hairdresserId: number
-  serviceIds: number[]
-  startTime: string
-  notes?: string
+  clientName:      string
+  clientPhone?:    string
+  hairdresserId:   number
+  hairdresserName: string
+  salonId:         number
+  salonName:       string
+  salonAddress?:   string
+  startTime:       string
+  notes?:          string
+  items:           AppointmentItemRequest[]
 }
 
 

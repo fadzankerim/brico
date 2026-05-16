@@ -15,13 +15,13 @@ const START_HOUR  = 8  // calendar starts at 08:00
 const END_HOUR    = 20 // calendar ends at 20:00
 const HOURS       = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR)
 
-const HAIRDRESSER_COLORS = [
-  { bg: 'bg-rose-500/20',    border: 'border-rose-500/40',    text: 'text-rose-300',    dot: 'bg-rose-500'    },
-  { bg: 'bg-violet-500/20',  border: 'border-violet-500/40',  text: 'text-violet-300',  dot: 'bg-violet-500'  },
-  { bg: 'bg-emerald-500/20', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-500' },
-  { bg: 'bg-blue-500/20',    border: 'border-blue-500/40',    text: 'text-blue-300',    dot: 'bg-blue-500'    },
-  { bg: 'bg-amber-500/20',   border: 'border-amber-500/40',   text: 'text-amber-300',   dot: 'bg-amber-500'   },
-]
+const STATUS_COLORS = {
+  PENDING:   { bg: 'bg-amber-500/20',   border: 'border-amber-500/40',   text: 'text-amber-300',   dot: 'bg-amber-500',   label: 'Čeka potvrdu' },
+  CONFIRMED: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-500', label: 'Potvrđen' },
+  COMPLETED: { bg: 'bg-blue-500/20',    border: 'border-blue-500/40',    text: 'text-blue-300',    dot: 'bg-blue-500',    label: 'Odrađen' },
+  CANCELLED: { bg: 'bg-slate-500/15',   border: 'border-slate-500/30',   text: 'text-slate-500',   dot: 'bg-slate-500',   label: 'Otkazan' },
+  NO_SHOW:   { bg: 'bg-rose-700/20',    border: 'border-rose-700/40',    text: 'text-rose-400',    dot: 'bg-rose-700',    label: 'Nije se pojavio' },
+} as const
 
 
 interface CalendarProps {
@@ -52,11 +52,8 @@ export default function AppointmentCalendar({ appointments, hairdressers, isLoad
 
     const days = Array.from({ length: 7}, (_, i) => addDays(weekStart, i))
 
-    const colorMap = useMemo(() => {
-    const map = new Map<number, number>()
-    hairdressers?.forEach((h, i) => map.set(h.id, i % HAIRDRESSER_COLORS.length))
-    return map
-  }, [hairdressers])
+    const getStatusColor = (status: string) =>
+    STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.PENDING
 
     const filtered = appointments.filter(
     (a) => filterHairdresser === 'all' || a.hairdresserId === filterHairdresser
@@ -126,20 +123,15 @@ export default function AppointmentCalendar({ appointments, hairdressers, isLoad
         </div>
       </div>
 
-      {/* ── Hairdresser color legend ── */}
-      {hairdressers?.length && hairdressers.length > 1 && filterHairdresser === 'all' && (
-        <div className="flex items-center gap-4 px-5 py-2 border-b border-white/5 overflow-x-auto scrollbar-none">
-          {hairdressers.map((h, i) => {
-            const c = HAIRDRESSER_COLORS[i % HAIRDRESSER_COLORS.length]
-            return (
-              <div key={h.id} className="flex items-center gap-1.5 shrink-0">
-                <div className={`w-2 h-2 rounded-full ${c.dot}`} />
-                <span className="text-xs text-slate-400">{h.fullName}</span>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* ── Status color legend ── */}
+      <div className="flex items-center gap-4 px-5 py-2 border-b border-white/5 overflow-x-auto scrollbar-none">
+        {Object.entries(STATUS_COLORS).map(([status, c]) => (
+          <div key={status} className="flex items-center gap-1.5 shrink-0">
+            <div className={`w-2 h-2 rounded-full ${c.dot}`} />
+            <span className="text-xs text-slate-400">{c.label}</span>
+          </div>
+        ))}
+      </div>
 
       {/* ── Calendar grid ── */}
       <div className="flex-1 overflow-auto">
@@ -217,8 +209,7 @@ export default function AppointmentCalendar({ appointments, hairdressers, isLoad
                 {/* Appointment blocks */}
                 {dayAppts.map((appt) => {
                   const { top, height } = getBlockStyle(appt.startTime, appt.endTime)
-                  const colorIdx = colorMap.get(appt.hairdresserId) ?? 0
-                  const c = HAIRDRESSER_COLORS[colorIdx]
+                  const c = getStatusColor(appt.status)
                   const isShort = height < 48
 
                   return (
@@ -255,7 +246,6 @@ export default function AppointmentCalendar({ appointments, hairdressers, isLoad
         {selectedAppointment && (
           <AppointmentDetailModal
             appointment={selectedAppointment}
-            colorIdx={colorMap.get(selectedAppointment.hairdresserId) ?? 0}
             onClose={() => setSelectedAppointment(null)}
             onEdit={onEditAppointment ? () => { onEditAppointment(selectedAppointment); setSelectedAppointment(null) } : undefined}
             onDelete={onDeleteAppointment ? () => { onDeleteAppointment(selectedAppointment.id); setSelectedAppointment(null) } : undefined}
@@ -269,18 +259,16 @@ export default function AppointmentCalendar({ appointments, hairdressers, isLoad
 // ── Appointment detail modal ─────────────────────────────────────────────────
 function AppointmentDetailModal({
   appointment: a,
-  colorIdx,
   onClose,
   onEdit,
   onDelete,
 }: {
   appointment: Appointment
-  colorIdx: number
   onClose: () => void
   onEdit?: () => void
   onDelete?: () => void
 }) {
-  const c = HAIRDRESSER_COLORS[colorIdx]
+  const c = STATUS_COLORS[a.status as keyof typeof STATUS_COLORS] ?? STATUS_COLORS.PENDING
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const duration = differenceInMinutes(parseISO(a.endTime), parseISO(a.startTime))
@@ -305,7 +293,7 @@ function AppointmentDetailModal({
         className="fixed z-50 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-80 top-1/2 -translate-y-1/2 sm:translate-y-0 sm:top-20 bg-[#0F1623] rounded-2xl border border-white/10 shadow-2xl shadow-black/60 overflow-hidden"
       >
         {/* Color accent header */}
-        <div className={cn('h-1.5 w-full', c.dot.replace('bg-', 'bg-'))} />
+        <div className={cn('h-1.5 w-full', c.dot)} />
 
         <div className="p-5">
           {/* Title row */}
@@ -323,10 +311,10 @@ function AppointmentDetailModal({
           <div className="space-y-3">
             {[
               { icon: User,       label: 'Frizer',   value: a.hairdresserName },
-              { icon: Scissors,   label: 'Usluga',   value: a.serviceName },
+              { icon: Scissors,   label: 'Usluga',   value: a.services?.length ? a.services.map(s => s.serviceName).join(', ') : (a.serviceName || '—') },
               { icon: Calendar,   label: 'Datum',    value: format(parseISO(a.startTime), 'dd.MM.yyyy') },
               { icon: Clock,      label: 'Termin',   value: `${formatTime(a.startTime)} – ${formatTime(a.endTime)} (${formatDuration({ hours: Math.floor(duration / 60), minutes: duration % 60 })})` },
-              { icon: DollarSign, label: 'Cijena',   value: formatPrice(a.price) },
+              { icon: DollarSign, label: 'Cijena',   value: formatPrice(a.totalPrice ?? a.price) },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0">

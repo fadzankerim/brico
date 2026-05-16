@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useLogout } from "../hooks/useAuth";
 import { useAuthStore } from "../store/authStore"
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ import {
 import { cn } from "../lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import type { LucideIcon } from "lucide-react";
-import { useNotifications } from "../hooks/useNotifications";
+import { useMarkAllRead, useMarkRead, useNotifications } from "../hooks/useNotifications";
 import { getRoleDashboardHref } from "../utils/roleUtils";
 
 function DropItem({ icon: Icon, label, onClick, danger }: {
@@ -45,21 +45,25 @@ function DropItem({ icon: Icon, label, onClick, danger }: {
 
 
 const NAV_LINKS = [
-  { label: 'Pronađi Salon', href: '/salons' },
-  { label: 'Za Salone', href: '/za-salone' },
-  { label: 'Kako Funkcioniše', href: '/#how-it-works' },
-]
+  { label: 'Pronađi Salon', href: '/salons', scrollTo: null },
+  { label: 'Za Salone',     href: '/',       scrollTo: 'za-salone' },
+  { label: 'Kako Funkcioniše', href: '/',    scrollTo: 'how-it-works' },
+] as const
 
 export default function Navbar(){
 
   const { user, isAuthenticated } = useAuthStore();
   const logout = useLogout();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: notifications = [] } = useNotifications();
+  const markAllRead = useMarkAllRead();
+  const markRead = useMarkRead();
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -68,15 +72,30 @@ export default function Navbar(){
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  // close dropdown on outside click
-
   useEffect(() => {
     if (!dropdownOpen) return;
     const close = () => setDropdownOpen(false);
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
+  }, [dropdownOpen]);
 
-  }, [dropdownOpen])
+  useEffect(() => {
+    if (!notifOpen) return;
+    const close = () => setNotifOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [notifOpen]);
+
+  const handleScrollLink = (href: string, scrollTo: string) => {
+    setMobileOpen(false);
+    const scroll = () => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth' });
+    if (location.pathname === href) {
+      scroll();
+    } else {
+      navigate(href);
+      setTimeout(scroll, 150);
+    }
+  };
 
   const dashboardHref = getRoleDashboardHref(user?.role)
 
@@ -102,22 +121,30 @@ export default function Navbar(){
 
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => (
-            <NavLink
-              key={link.href}
-              to={link.href}
-              className={({ isActive }) =>
-                cn(
-                  'px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                  isActive
-                    ? 'text-white bg-white/8'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+          {NAV_LINKS.map((link) =>
+            link.scrollTo ? (
+              <button
+                key={link.label}
+                onClick={() => handleScrollLink(link.href, link.scrollTo!)}
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:text-white hover:bg-white/5"
+              >
+                {link.label}
+              </button>
+            ) : (
+              <NavLink
+                key={link.href}
+                to={link.href}
+                className={({ isActive }) =>
+                  cn(
+                    'px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                    isActive ? 'text-white bg-white/8' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            )
+          )}
         </div>
 
         {/* Right side */}
@@ -125,12 +152,65 @@ export default function Navbar(){
           {isAuthenticated() && user ? (
             <>
               {/* Notification bell */}
-              <button className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors">
-                <Bell className="w-4.5 h-4.5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
-                )}
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setNotifOpen(o => !o) }}
+                  className="relative w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/8 transition-colors"
+                >
+                  <Bell className="w-4.5 h-4.5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#080C14]" />
+                  )}
+                </button>
+                <AnimatePresence>
+                  {notifOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-full mt-2 w-80 rounded-2xl bg-[#0F1623] border border-white/8 shadow-2xl shadow-black/60 overflow-hidden z-50"
+                    >
+                      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white">Obavještenja</span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={() => markAllRead.mutate()}
+                            className="text-xs text-rose-400 hover:text-rose-300 transition-colors"
+                          >
+                            Označi sve pročitanim
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <p className="text-slate-500 text-sm text-center py-8">Nema obavještenja</p>
+                        ) : (
+                          notifications.slice(0, 10).map((n) => (
+                            <div
+                              key={n.id}
+                              onClick={() => { if (!n.isRead) markRead.mutate(n.id); setNotifOpen(false) }}
+                              className={cn(
+                                'px-4 py-3 border-b border-white/5 last:border-0 cursor-pointer hover:bg-white/4 transition-colors',
+                                !n.isRead && 'bg-rose-500/5'
+                              )}
+                            >
+                              <div className="flex items-start gap-2">
+                                {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />}
+                                <div className={cn(!n.isRead ? '' : 'pl-3.5')}>
+                                  <p className="text-sm text-white font-medium leading-snug">{n.title}</p>
+                                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{n.message}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
  
               {/* Avatar dropdown */}
               <div className="relative">
@@ -226,21 +306,31 @@ export default function Navbar(){
             className="md:hidden bg-[#080C14]/98 backdrop-blur-xl border-t border-white/5"
           >
             <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      'px-4 py-3 rounded-xl text-sm font-medium transition-colors',
-                      isActive ? 'text-white bg-white/8' : 'text-slate-400 hover:text-white'
-                    )
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ))}
+              {NAV_LINKS.map((link) =>
+                link.scrollTo ? (
+                  <button
+                    key={link.label}
+                    onClick={() => handleScrollLink(link.href, link.scrollTo!)}
+                    className="px-4 py-3 rounded-xl text-sm font-medium transition-colors text-slate-400 hover:text-white text-left"
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <NavLink
+                    key={link.href}
+                    to={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        'px-4 py-3 rounded-xl text-sm font-medium transition-colors',
+                        isActive ? 'text-white bg-white/8' : 'text-slate-400 hover:text-white'
+                      )
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                )
+              )}
  
               {!isAuthenticated() && (
                 <div className="flex gap-2 pt-2 border-t border-white/5 mt-1">

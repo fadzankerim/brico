@@ -302,7 +302,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ─────────────────────────────────────────────────────────────── */}
-      <section className="py-20 border-t border-white/5">
+      <section id="za-salone" className="py-20 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <FadeIn>
             <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-rose-600 to-rose-800 p-10 sm:p-16 text-center">

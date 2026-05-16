@@ -22,12 +22,13 @@ interface AddAppointmentModalProps {
     }) => void
     hairdressers: Hairdresser[]
     services: Service[]
+    salonId?: number
     editAppointment?: Appointment | null
     isSaving?: boolean
 }
 
 
-export default function AddAppointmentModal({ open, onClose, onSave, hairdressers, services, editAppointment, isSaving }: AddAppointmentModalProps) {
+export default function AddAppointmentModal({ open, onClose, onSave, hairdressers, services, salonId, editAppointment, isSaving }: AddAppointmentModalProps) {
 
     const [hairdresserId, setHairdresserId] = useState<number | ''>('')
     const [serviceId, setServiceId] = useState<number | ''>('')
@@ -37,7 +38,8 @@ export default function AddAppointmentModal({ open, onClose, onSave, hairdresser
     const [clientPhone, setClientPhone] = useState('')
     const [notes, setNotes] = useState('')
 
-    const { data: availability } = useAvailability(undefined, hairdresserId || undefined, date || undefined, 30)
+    const selectedService = services.find(s => s.id === Number(serviceId))
+    const { data: availability } = useAvailability(salonId, hairdresserId || undefined, date || undefined, selectedService?.durationMinutes ?? 30)
     const slots = availability?.slots ?? []
 
     useEffect(() => {

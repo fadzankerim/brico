@@ -3,7 +3,7 @@ import { useAuthStore } from "../../store/authStore"
 import type { Appointment } from "../../types/booking.types"
 import type { Salon } from "../../types/salon.typs"
 import type { SubscriptionResponse } from "../../services/salon.service"
-import { useSalonAppointments, useUpdateAppointmentStatus } from "../../hooks/useBooking"
+import { appointmentKeys, useSalonAppointments, useUpdateAppointmentStatus } from "../../hooks/useBooking"
 import { useMySalon, salonKeys } from "../../hooks/useSalons"
 import { CalendarDays, DollarSign, Star, TrendingUp, Users, Building2, Edit2, Check, X, Ban, Clock, Lock, Crown, AlertTriangle } from "lucide-react"
 import StatCard from "../../components/StatCard"
@@ -439,6 +439,12 @@ export default function OwnerDashboard() {
 
   const { data: salon, isLoading: salonLoading } = useMySalon()
   const { data: appointments = [] } = useSalonAppointments(salon?.id ?? 0)
+  const { data: services = [] } = useQuery({
+    queryKey: ['services', salon?.id],
+    queryFn:  () => salonService.getServices(salon!.id),
+    enabled:  !!salon?.id,
+    staleTime: 1000 * 60 * 5,
+  })
   const { data: subscription } = useQuery({
     queryKey: ['subscription', salon?.id],
     queryFn: () => salonService.getSubscription(salon!.id),
@@ -454,6 +460,32 @@ export default function OwnerDashboard() {
       setCancelId(null)
     },
     onError: () => toast.error('Greška pri otkazivanju'),
+  })
+
+  const createAppt = useMutation({
+    mutationFn: (data: { hairdresserId: number; serviceId: number; startTime: string; notes?: string; clientName?: string; clientPhone?: string }) => {
+      const hairdresser = hairdressers.find(h => h.id === data.hairdresserId)
+      const service     = services.find(s => s.id === data.serviceId)
+      return bookingService.create({
+        clientName:      data.clientName ?? 'Gost',
+        clientPhone:     data.clientPhone,
+        hairdresserId:   data.hairdresserId,
+        hairdresserName: hairdresser?.fullName ?? '',
+        salonId:         salon!.id,
+        salonName:       salon!.name,
+        salonAddress:    salon!.address,
+        startTime:       data.startTime,
+        notes:           data.notes,
+        items: service ? [{ serviceId: service.id, serviceName: service.name, price: service.price, durationMinutes: service.durationMinutes }] : [],
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.salonAll(salon!.id) })
+      setAddModal(false)
+      setEditTarget(null)
+      toast.success('Termin kreiran')
+    },
+    onError: () => toast.error('Greška pri kreiranju termina'),
   })
 
   if (salonLoading) return <DashboardSkeleton />
@@ -502,9 +534,10 @@ export default function OwnerDashboard() {
               ? <div className="text-center py-10 bg-[#0F1623] rounded-2xl border border-white/5 text-slate-500 text-sm">Nema termina za danas</div>
               : <div className="space-y-3">{todayAppts.map((a, i) => (
                   <motion.div key={a.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5"
+                    className="flex items-center gap-4 p-4 rounded-xl bg-[#0F1623] border border-white/5 overflow-hidden relative"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-sm font-bold text-white shrink-0">{a.clientName.charAt(0)}</div>
+                    <div className={`absolute left-0 inset-y-0 w-1 ${{ PENDING: 'bg-amber-500', CONFIRMED: 'bg-emerald-500', COMPLETED: 'bg-blue-500', CANCELLED: 'bg-slate-500', NO_SHOW: 'bg-rose-700' }[a.status as string] ?? 'bg-slate-500'}`} />
+                    <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-sm font-bold text-white shrink-0 ml-2">{a.clientName.charAt(0)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white">{a.clientName}</p>
                       <p className="text-xs text-slate-400">{a.serviceName} · {a.hairdresserName}</p>
@@ -750,10 +783,12 @@ export default function OwnerDashboard() {
       <AddAppointmentModal
         open={addModalOpen}
         onClose={() => { setAddModal(false); setEditTarget(null) }}
-        onSave={() => { setAddModal(false); setEditTarget(null) }}
+        onSave={(data) => createAppt.mutate(data)}
         hairdressers={hairdressers}
-        services={[]}
+        services={services}
+        salonId={salon.id}
         editAppointment={editTarget}
+        isSaving={createAppt.isPending}
       />
     </div>
   )
