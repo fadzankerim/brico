@@ -71,6 +71,7 @@ export interface AppointmentItemRequest {
 }
 
 export interface CreateAppointmentRequest {
+  clientId?:       number
   clientName:      string
   clientPhone?:    string
   hairdresserId:   number

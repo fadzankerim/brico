@@ -9,7 +9,6 @@ import java.util.List;
 @Data
 public class AppointmentRequest {
 
-    @NotNull(message = "Client ID je obavezan")
     private Long clientId;
 
     @NotBlank(message = "Ime klijenta je obavezno")
