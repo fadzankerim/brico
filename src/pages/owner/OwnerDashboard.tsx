@@ -541,10 +541,10 @@ export default function OwnerDashboard() {
                     <div className="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center text-sm font-bold text-white shrink-0 ml-2">{a.clientName.charAt(0)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white">{a.clientName}</p>
-                      <p className="text-xs text-slate-400">{a.serviceName} · {a.hairdresserName}</p>
+                      <p className="text-xs text-slate-400">{a.items?.[0]?.serviceName ?? a.serviceName ?? '—'} · {a.hairdresserName}</p>
                     </div>
                     <span className="text-sm text-slate-300 shrink-0">{formatTime(a.startTime)}</span>
-                    <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? a.price)}</span>
+                    <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? (a.items?.reduce((s, i) => s + i.price, 0)) ?? a.price)}</span>
                     <AppointmentStatusBadge status={a.status} />
                     {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
                       cancelId === a.id ? (

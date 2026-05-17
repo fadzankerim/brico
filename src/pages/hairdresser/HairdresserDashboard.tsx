@@ -165,7 +165,7 @@ export default function HairdresserDashboard() {
       const now = new Date();
       return now.getTime() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
     })
-    .reduce((sum, a) => sum + a.price, 0);
+    .reduce((sum, a) => sum + (a.totalPrice ?? a.price ?? 0), 0);
 
   const monthrevenue = completed.reduce((sum, a) => sum + (a.totalPrice ?? a.price ?? 0), 0)
 
@@ -231,11 +231,11 @@ export default function HairdresserDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-white text-sm">{a.clientName}</p>
-                      <p className="text-xs text-slate-400">{a.serviceName}</p>
+                      <p className="text-xs text-slate-400">{a.items?.[0]?.serviceName ?? a.serviceName ?? '—'}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-medium text-white">{formatTime(a.startTime)}</p>
-                      <p className="text-xs text-slate-500">{formatPrice(a.price)}</p>
+                      <p className="text-xs text-slate-500">{formatPrice(a.totalPrice ?? a.price)}</p>
                     </div>
                     <AppointmentStatusBadge status={a.status} />
                   </motion.div>
@@ -257,7 +257,7 @@ export default function HairdresserDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white">{a.clientName}</p>
-                    <p className="text-xs text-slate-400">{a.serviceName} · {formatDate(a.startTime)} {formatTime(a.startTime)}</p>
+                    <p className="text-xs text-slate-400">{a.items?.[0]?.serviceName ?? a.serviceName ?? '—'} · {formatDate(a.startTime)} {formatTime(a.startTime)}</p>
                   </div>
                   <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? a.price)}</span>
                   {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
