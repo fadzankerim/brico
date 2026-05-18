@@ -16,11 +16,13 @@ public class RabbitConfig {
     public static final String SLOT_RESERVED_KEY  = "salon.slot.reserved";
     public static final String SLOT_REJECTED_KEY  = "salon.slot.rejected";
     public static final String NOTIFICATION_KEY   = "notification.push";
+    public static final String REMINDER_KEY       = "appointment.reminder";
 
     // Queues
     public static final String NOTIF_CONFIRMED_QUEUE = "notif.appointment.confirmed.queue";
     public static final String NOTIF_CANCELLED_QUEUE = "notif.appointment.cancelled.queue";
     public static final String NOTIF_PUSH_QUEUE      = "notif.push.queue";
+    public static final String REMINDER_QUEUE        = "notif.appointment.reminder.queue";
 
     @Bean
     public TopicExchange exchange() {
@@ -55,6 +57,16 @@ public class RabbitConfig {
     @Bean
     public Binding pushBinding() {
         return BindingBuilder.bind(notifPushQueue()).to(exchange()).with(NOTIFICATION_KEY);
+    }
+
+    @Bean
+    public Queue reminderQueue() {
+        return QueueBuilder.durable(REMINDER_QUEUE).build();
+    }
+
+    @Bean
+    public Binding reminderBinding() {
+        return BindingBuilder.bind(reminderQueue()).to(exchange()).with(REMINDER_KEY);
     }
 
     @Bean

@@ -1,4 +1,4 @@
-package ba.unsa.etf.nwt.salonservice.messaging;
+package ba.unsa.etf.nwt.bookingservice.messaging;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,20 +12,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AppointmentCreatedEvent {
+public class AppointmentReminderEvent {
     private Long          appointmentId;
-    private Long          hairdresserId;
-    private Long          salonId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
     private Long          clientId;
-
-    // Podaci za email notifikacije (proslijeđeni iz booking-service)
     private String        clientEmail;
     private String        clientName;
     private String        hairdresserName;
     private String        salonName;
     private String        salonAddress;
+    private LocalDateTime startTime;
     private BigDecimal    totalPrice;
     private String        servicesSummary;
+    /** "24h" ili "1h" */
+    private String        reminderType;
 }
