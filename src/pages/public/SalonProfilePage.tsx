@@ -51,7 +51,7 @@ export default function SalonProfilePage() {
 
 
     const todayHours = salon.workingHours?.find(
-        (wh) => wh.dayOfWeek === (new Date().getDay() + 6) % 7
+        (wh) => wh.dayOfWeek === new Date().getDay()
     )
     const isOpenToday = todayHours && !todayHours.isDayOff
 

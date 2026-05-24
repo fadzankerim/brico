@@ -91,7 +91,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="bg-[#0F1623] border border-white/10 rounded-xl p-3 text-sm shadow-xl">
       <p className="text-slate-400 mb-1">{label}</p>
-      <p className="font-semibold text-white">€{payload[0].value.toLocaleString()}</p>
+      <p className="font-semibold text-white">{payload[0].value.toLocaleString()} KM</p>
     </div>
   )
 }
@@ -604,7 +604,7 @@ export default function OwnerDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Ovaj mjesec" value={formatPrice(monthrevenue)}  icon={DollarSign}   accent="emerald" change={{ value: 15 }} />
             <StatCard label="Termina"     value={completed.length.toString()} icon={CalendarDays} accent="rose"    change={{ value: 8 }} />
-            <StatCard label="Avg/termin"  value={completed.length ? formatPrice(monthrevenue / completed.length) : '€0'} icon={TrendingUp} accent="blue" />
+            <StatCard label="Avg/termin"  value={completed.length ? formatPrice(monthrevenue / completed.length) : formatPrice(0)} icon={TrendingUp} accent="blue" />
           </div>
 
           <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">
@@ -619,7 +619,7 @@ export default function OwnerDashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `${v} KM`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="revenue" stroke="#e94560" strokeWidth={2} fill="url(#grad)" dot={false} activeDot={{ r: 5, fill: '#e94560' }} />
               </AreaChart>
@@ -694,11 +694,11 @@ export default function OwnerDashboard() {
                       <BarChart data={hairdresserRevChart} barSize={28}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                         <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `€${v}`} />
+                        <YAxis tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `${v} KM`} />
                         <Tooltip
                           contentStyle={{ background: '#0F1623', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 13 }}
                           labelStyle={{ color: '#94a3b8' }}
-                          formatter={(v: unknown) => [`€${v}`, 'Prihod']}
+                          formatter={(v: unknown) => [`${v} KM`, 'Prihod']}
                         />
                         <Bar dataKey="revenue" fill="#e94560" radius={[6, 6, 0, 0]} />
                       </BarChart>
