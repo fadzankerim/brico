@@ -311,7 +311,7 @@ function AppointmentDetailModal({
           <div className="space-y-3">
             {[
               { icon: User,       label: 'Frizer',   value: a.hairdresserName },
-              { icon: Scissors,   label: 'Usluga',   value: a.services?.length ? a.services.map(s => s.serviceName).join(', ') : (a.serviceName || '—') },
+              { icon: Scissors,   label: 'Usluga',   value: (a.items?.length ? a.items : a.services?.length ? a.services : []).map(s => s.serviceName).join(', ') || a.serviceName || '—' },
               { icon: Calendar,   label: 'Datum',    value: format(parseISO(a.startTime), 'dd.MM.yyyy') },
               { icon: Clock,      label: 'Termin',   value: `${formatTime(a.startTime)} – ${formatTime(a.endTime)} (${formatDuration({ hours: Math.floor(duration / 60), minutes: duration % 60 })})` },
               { icon: DollarSign, label: 'Cijena',   value: formatPrice(a.totalPrice ?? a.price) },

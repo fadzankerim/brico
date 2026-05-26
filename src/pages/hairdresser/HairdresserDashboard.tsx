@@ -111,6 +111,7 @@ export default function HairdresserDashboard() {
     mutationFn: (data: { hairdresserId: number; serviceId: number; startTime: string; notes?: string; clientName?: string; clientPhone?: string }) => {
       const service = services.find((s: any) => s.id === data.serviceId)
       return bookingService.create({
+        clientId:        user?.id,
         clientName:      data.clientName ?? 'Gost',
         clientPhone:     data.clientPhone,
         hairdresserId:   data.hairdresserId,
@@ -230,11 +231,11 @@ export default function HairdresserDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-white text-sm">{a.clientName}</p>
-                      <p className="text-xs text-slate-400">{a.serviceName}</p>
+                      <p className="text-xs text-slate-400">{a.items?.[0]?.serviceName ?? a.serviceName ?? '—'}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-medium text-white">{formatTime(a.startTime)}</p>
-                      <p className="text-xs text-slate-500">{formatPrice(a.price)}</p>
+                      <p className="text-xs text-slate-500">{formatPrice(a.totalPrice ?? a.price)}</p>
                     </div>
                     <AppointmentStatusBadge status={a.status} />
                   </motion.div>
@@ -256,7 +257,7 @@ export default function HairdresserDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white">{a.clientName}</p>
-                    <p className="text-xs text-slate-400">{a.serviceName} · {formatDate(a.startTime)} {formatTime(a.startTime)}</p>
+                    <p className="text-xs text-slate-400">{a.items?.[0]?.serviceName ?? a.serviceName ?? '—'} · {formatDate(a.startTime)} {formatTime(a.startTime)}</p>
                   </div>
                   <span className="text-sm font-semibold text-white shrink-0">{formatPrice(a.totalPrice ?? a.price)}</span>
                   {a.status !== 'CANCELLED' && a.status !== 'COMPLETED' && (
