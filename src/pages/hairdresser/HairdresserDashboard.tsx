@@ -23,7 +23,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return (
     <div className="bg-[#0F1623] border border-white/10 rounded-xl p-3 text-sm shadow-xl">
       <p className="text-slate-400 mb-1">{label}</p>
-      <p className="font-semibold text-white">€{payload[0].value.toLocaleString()}</p>
+      <p className="font-semibold text-white">{payload[0].value.toLocaleString()} KM</p>
     </div>
   );
 };
@@ -297,7 +297,7 @@ export default function HairdresserDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Ovaj mjesec" value={formatPrice(monthrevenue)} icon={DollarSign}   accent="emerald" change={{ value: 12 }} />
             <StatCard label="Termina"     value={(completed.length).toString()}          icon={CalendarDays} accent="rose"    change={{ value: 5 }} />
-            <StatCard label="Avg/termin"  value={completed.length ? formatPrice(monthrevenue / completed.length) : '€0'} icon={TrendingUp} accent="blue" />
+            <StatCard label="Avg/termin"  value={completed.length ? formatPrice(monthrevenue / completed.length) : formatPrice(0)} icon={TrendingUp} accent="blue" />
           </div>
 
           <div className="p-6 rounded-2xl bg-[#0F1623] border border-white/5">

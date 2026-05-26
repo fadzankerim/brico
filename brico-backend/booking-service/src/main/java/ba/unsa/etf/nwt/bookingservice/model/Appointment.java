@@ -33,8 +33,7 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
-    @Column(name = "client_id", nullable = false)
+    @Column(name = "client_id", nullable = true)
     private Long clientId;
 
     @NotBlank
