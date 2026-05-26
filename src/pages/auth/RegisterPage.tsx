@@ -489,7 +489,10 @@ export default function RegisterPage() {
 
   const { mutate: register_, isPending } = useRegister()
 
-  const { register, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<RegisterForm>({
+  const {
+    register, handleSubmit, watch, setValue, trigger, setError,
+    formState: { errors },
+  } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: { role: 'CLIENT' },
   })
@@ -518,21 +521,55 @@ export default function RegisterPage() {
   // ── Final submit ─────────────────────────────────────────────────────────────
   const onSubmit = (formData: RegisterForm) => {
     if (isSalonOwner && step < 3) return // shouldn't happen but guard
-    register_({
-      ...formData,
-      ...(isSalonOwner && {
-        planType: selectedPlan,
-        salonData: {
-          name:        salonData.name,
-          city:        salonData.city,
-          address:     salonData.address,
-          phone:       salonData.phone || undefined,
-          description: salonData.description || undefined,
-          website:     salonData.website || undefined,
-          idBroj:      salonData.idBroj,
+    register_(
+      {
+        ...formData,
+        ...(isSalonOwner && {
+          planType: selectedPlan,
+          salonData: {
+            name:        salonData.name,
+            city:        salonData.city,
+            address:     salonData.address,
+            phone:       salonData.phone || undefined,
+            description: salonData.description || undefined,
+            website:     salonData.website || undefined,
+            idBroj:      salonData.idBroj,
+          },
+        }),
+      },
+      {
+        onError: (error: any) => {
+          const errType = error?.response?.data?.error
+          const fields  = error?.response?.data?.fields as Record<string, string> | undefined
+
+          if (errType === 'conflict') {
+            // Email je zauzet — mapiramo na polje i vraćamo na korak 1
+            setError('email', { type: 'server', message: 'Korisnik sa ovim emailom već postoji.' })
+            if (isSalonOwner) setStep(1)
+
+          } else if (errType === 'validation' && fields) {
+            // Backend validacijske greške — mapiramo po polju
+            if (fields.email)    setError('email',    { type: 'server', message: fields.email })
+            if (fields.fullName) setError('fullName', { type: 'server', message: fields.fullName })
+            if (fields.phone)    setError('phone',    { type: 'server', message: fields.phone })
+            if (fields.password) setError('password', { type: 'server', message: fields.password })
+
+            // Salon polja — vraćamo na korak 2 ako postoje greške
+            const salonFieldErrors: Partial<Record<keyof SalonDraft, string>> = {}
+            if (fields.name)    salonFieldErrors.name    = fields.name
+            if (fields.city)    salonFieldErrors.city    = fields.city
+            if (fields.address) salonFieldErrors.address = fields.address
+            if (fields.idBroj)  salonFieldErrors.idBroj  = fields.idBroj
+            if (Object.keys(salonFieldErrors).length) {
+              setSalonErrors(salonFieldErrors)
+              setStep(2)
+            } else if (isSalonOwner) {
+              setStep(1) // greška je na personalnim podacima
+            }
+          }
         },
-      }),
-    })
+      }
+    )
   }
 
   return (

@@ -80,13 +80,11 @@ export function useRegister() {
       }
     },
     onError: (error: any) => {
-      const msg = error?.response?.data?.message
+      const msg     = error?.response?.data?.message
       const errType = error?.response?.data?.error
-      if (errType === 'conflict') {
-        toast.error('Korisnik sa ovim emailom već postoji.')
-      } else if (errType === 'validation') {
-        toast.error('Provjerite unesene podatke.')
-      } else {
+      // 'conflict' i 'validation' greške komponenta obrađuje direktno
+      // putem setError — ovdje hvatamo samo neočekivane greške
+      if (errType !== 'conflict' && errType !== 'validation') {
         toast.error(msg ?? 'Greška pri registraciji.')
       }
     },
