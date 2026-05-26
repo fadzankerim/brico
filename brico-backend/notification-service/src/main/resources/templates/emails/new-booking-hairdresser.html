@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="bs">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nova rezervacija</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background:#f4f4f7; margin:0; padding:0; }
+    .wrapper { max-width:580px; margin:32px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .header { background:#1a1a2e; padding:28px 32px; text-align:center; }
+    .header h1 { color:#e94560; margin:0; font-size:22px; letter-spacing:1px; }
+    .header p  { color:#aaa; margin:4px 0 0; font-size:13px; }
+    .body { padding:32px; }
+    .body h2 { color:#1a1a2e; margin-top:0; }
+    .detail-box { background:#f8f8fb; border-left:4px solid #16a34a; border-radius:4px; padding:16px 20px; margin:20px 0; }
+    .detail-box table { width:100%; border-collapse:collapse; }
+    .detail-box td { padding:5px 0; font-size:14px; color:#333; }
+    .detail-box td:first-child { color:#777; width:140px; }
+    .badge { display:inline-block; background:#16a34a; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+    .footer { background:#f4f4f7; text-align:center; padding:16px; font-size:12px; color:#aaa; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>Brico.ba</h1>
+    <p>Upravljanje terminima</p>
+  </div>
+  <div class="body">
+    <h2>Nova rezervacija <span class="badge">NOVO</span></h2>
+    <p>Zdravo <strong th:text="${hairdresserName}">Frizer</strong>,</p>
+    <p>Imate novu potvrđenu rezervaciju:</p>
+
+    <div class="detail-box">
+      <table>
+        <tr>
+          <td>Klijent:</td>
+          <td><strong th:text="${clientName}">—</strong></td>
+        </tr>
+        <tr>
+          <td>Datum i vrijeme:</td>
+          <td><strong th:text="${startTime}">—</strong></td>
+        </tr>
+        <tr>
+          <td>Usluge:</td>
+          <td th:text="${servicesSummary}">—</td>
+        </tr>
+        <tr>
+          <td>Salon:</td>
+          <td th:text="${salonName}">—</td>
+        </tr>
+        <tr th:if="${notes != null and !#strings.isEmpty(notes)}">
+          <td>Napomena:</td>
+          <td th:text="${notes}">—</td>
+        </tr>
+      </table>
+    </div>
+
+    <p>Molimo Vas da se pripremite na vrijeme. Hvala na profesionalnosti!</p>
+  </div>
+  <div class="footer">© 2026 Brico.ba · Sva prava zadržana</div>
+</div>
+</body>
+</html>

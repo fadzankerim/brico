@@ -22,4 +22,10 @@ public class UserClientFallback implements UserClient {
         log.error("user-service nije dostupan — fallback aktiviran za userId={}", userId);
         throw new ServiceUnavailableException("user-service trenutno nije dostupan. Pokušajte ponovo.");
     }
+
+    @Override
+    public Map<String, Object> getUser(Long userId) {
+        log.warn("user-service nije dostupan — getUser fallback za userId={}", userId);
+        return Map.of();
+    }
 }

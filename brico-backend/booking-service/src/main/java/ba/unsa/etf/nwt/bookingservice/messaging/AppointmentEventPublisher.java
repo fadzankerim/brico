@@ -21,10 +21,22 @@ public class AppointmentEventPublisher {
     }
 
     public void publishNotification(Long userId, String type, String title, String message, Long refId) {
+        publishNotificationEvent(new NotificationEvent(userId, type, title, message, refId));
+    }
+
+    public void publishNotificationEvent(NotificationEvent event) {
         rabbitTemplate.convertAndSend(
                 RabbitConfig.EXCHANGE,
                 RabbitConfig.NOTIFICATION_KEY,
-                new NotificationEvent(userId, type, title, message, refId));
-        log.info("Notifikacija → userId={} type={}", userId, type);
+                event);
+        log.info("Notifikacija → userId={} type={}", event.getUserId(), event.getType());
+    }
+
+    public void publishReminder(AppointmentReminderEvent event) {
+        rabbitTemplate.convertAndSend(
+                RabbitConfig.EXCHANGE,
+                RabbitConfig.REMINDER_KEY,
+                event);
+        log.info("Podsjetnik {} objavljen za appointmentId={}", event.getReminderType(), event.getAppointmentId());
     }
 }

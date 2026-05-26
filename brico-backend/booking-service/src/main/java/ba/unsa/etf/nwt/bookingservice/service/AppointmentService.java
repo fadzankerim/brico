@@ -6,6 +6,7 @@ import ba.unsa.etf.nwt.bookingservice.dto.*;
 import ba.unsa.etf.nwt.bookingservice.exception.ResourceNotFoundException;
 import ba.unsa.etf.nwt.bookingservice.messaging.AppointmentCreatedEvent;
 import ba.unsa.etf.nwt.bookingservice.messaging.AppointmentEventPublisher;
+import ba.unsa.etf.nwt.bookingservice.messaging.NotificationEvent;
 import ba.unsa.etf.nwt.bookingservice.model.*;
 import ba.unsa.etf.nwt.bookingservice.repository.AppointmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -115,6 +116,7 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest req) {
+<<<<<<< HEAD
         // ── Inter-service validacija (sinhrona komunikacija putem Feign + Eureka) ──
         // 1. Provjeri da klijent postoji i aktivan je u user-service (samo ako je clientId poznat)
         if (req.getClientId() != null) {
@@ -122,6 +124,21 @@ public class AppointmentService {
             if (Boolean.FALSE.equals(userInfo.get("active"))) {
                 throw new IllegalStateException("Klijent sa ID=" + req.getClientId() + " nije aktivan");
             }
+=======
+        // 1. Provjeri da klijent postoji i aktivan je u user-service
+        Map<String, Object> userInfo = userClient.validateUser(req.getClientId());
+        if (Boolean.FALSE.equals(userInfo.get("active"))) {
+            throw new IllegalStateException("Klijent sa ID=" + req.getClientId() + " nije aktivan");
+>>>>>>> origin/email
+        }
+
+        // Dohvati email klijenta za email notifikaciju
+        String clientEmail = null;
+        try {
+            Map<String, Object> userData = userClient.getUser(req.getClientId());
+            clientEmail = (String) userData.get("email");
+        } catch (Exception e) {
+            // Email nije kritičan za kreiranje termina
         }
 
         // 2. Provjeri da salon postoji i aktivan je u salon-service
@@ -146,6 +163,11 @@ public class AppointmentService {
 
         int totalMinutes = req.getItems().stream()
                 .mapToInt(AppointmentItemRequest::getDurationMinutes).sum();
+
+        String servicesSummary = req.getItems().stream()
+                .map(AppointmentItemRequest::getServiceName)
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("");
 
         Appointment appt = Appointment.builder()
                 .clientId(req.getClientId())
@@ -177,14 +199,21 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appt);
 
         // ── Saga: objavi async event za rezervaciju slota u salon-serviceu ──
-        eventPublisher.publishAppointmentCreated(new AppointmentCreatedEvent(
-                saved.getId(),
-                saved.getHairdresserId(),
-                saved.getSalonId(),
-                saved.getStartTime(),
-                saved.getEndTime(),
-                saved.getClientId()
-        ));
+        eventPublisher.publishAppointmentCreated(AppointmentCreatedEvent.builder()
+                .appointmentId(saved.getId())
+                .hairdresserId(saved.getHairdresserId())
+                .salonId(saved.getSalonId())
+                .startTime(saved.getStartTime())
+                .endTime(saved.getEndTime())
+                .clientId(saved.getClientId())
+                .clientEmail(clientEmail)
+                .clientName(saved.getClientName())
+                .hairdresserName(saved.getHairdresserName())
+                .salonName(saved.getSalonName())
+                .salonAddress(saved.getSalonAddress())
+                .totalPrice(saved.getTotalPrice())
+                .servicesSummary(servicesSummary)
+                .build());
 
         return toResponse(saved);
     }
@@ -227,15 +256,19 @@ public class AppointmentService {
         appt.setCancelledAt(LocalDateTime.now());
         Appointment saved = appointmentRepository.save(appt);
 
-        // Obavijesti klijenta da mu je termin otkazan
-        eventPublisher.publishNotification(
-                saved.getClientId(),
-                "APPOINTMENT_CANCELLED",
-                "Termin otkazan",
-                "Vaš termin u salonu " + saved.getSalonName() + " je otkazan." +
-                (reason != null && !reason.isBlank() ? " Razlog: " + reason : ""),
-                saved.getId()
-        );
+        // Dohvati email klijenta (nije kritično)
+        String clientEmail = null;
+        try {
+            Map<String, Object> userData = userClient.getUser(saved.getClientId());
+            clientEmail = (String) userData.get("email");
+        } catch (Exception ignored) {}
+
+        String msg = "Vaš termin u salonu " + saved.getSalonName() + " je otkazan." +
+                     (reason != null && !reason.isBlank() ? " Razlog: " + reason : "");
+
+        NotificationEvent event = new NotificationEvent(
+                saved.getClientId(), "APPOINTMENT_CANCELLED", "Termin otkazan", msg, saved.getId(), clientEmail);
+        eventPublisher.publishNotificationEvent(event);
 
         return toResponse(saved);
     }

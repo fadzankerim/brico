@@ -58,4 +58,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("salonId") Long salonId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    // Termini kojima treba poslati 24h podsjetnik (NULL tretiramo isto kao false)
+    @Query("SELECT a FROM Appointment a WHERE a.status NOT IN ('CANCELLED', 'COMPLETED', 'NO_SHOW') " +
+           "AND a.startTime >= :from AND a.startTime < :to " +
+           "AND (a.reminder24hSent IS NULL OR a.reminder24hSent = false)")
+    List<Appointment> findForReminder24h(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    // Termini kojima treba poslati 1h podsjetnik (NULL tretiramo isto kao false)
+    @Query("SELECT a FROM Appointment a WHERE a.status NOT IN ('CANCELLED', 'COMPLETED', 'NO_SHOW') " +
+           "AND a.startTime >= :from AND a.startTime < :to " +
+           "AND (a.reminder1hSent IS NULL OR a.reminder1hSent = false)")
+    List<Appointment> findForReminder1h(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
 }

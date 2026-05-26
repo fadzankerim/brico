@@ -90,6 +90,15 @@ public class Appointment {
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
 
+    // Flags za praćenje poslatih podsjetnika (nullable da ddl-auto=update može dodati kolumne)
+    @Column(name = "reminder_24h_sent")
+    @Builder.Default
+    private Boolean reminder24hSent = false;
+
+    @Column(name = "reminder_1h_sent")
+    @Builder.Default
+    private Boolean reminder1hSent = false;
+
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
