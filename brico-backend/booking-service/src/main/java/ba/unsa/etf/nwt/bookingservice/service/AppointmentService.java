@@ -116,7 +116,6 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse create(AppointmentRequest req) {
-<<<<<<< HEAD
         // ── Inter-service validacija (sinhrona komunikacija putem Feign + Eureka) ──
         // 1. Provjeri da klijent postoji i aktivan je u user-service (samo ako je clientId poznat)
         if (req.getClientId() != null) {
@@ -124,12 +123,6 @@ public class AppointmentService {
             if (Boolean.FALSE.equals(userInfo.get("active"))) {
                 throw new IllegalStateException("Klijent sa ID=" + req.getClientId() + " nije aktivan");
             }
-=======
-        // 1. Provjeri da klijent postoji i aktivan je u user-service
-        Map<String, Object> userInfo = userClient.validateUser(req.getClientId());
-        if (Boolean.FALSE.equals(userInfo.get("active"))) {
-            throw new IllegalStateException("Klijent sa ID=" + req.getClientId() + " nije aktivan");
->>>>>>> origin/email
         }
 
         // Dohvati email klijenta za email notifikaciju
