@@ -12,11 +12,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 // Pretplate salona:
-//  Salon 1 (Elite Cut)      → PRO  (aktivan 6 mj, još 6 mj)
-//  Salon 2 (Urban Barber)   → PRO  (aktivan 2 mj, još 10 mj)
-//  Salon 3 (Glam Studio)    → BASIC aktivan
-//  Salon 4 (Barber Kingdom) → PRO  (aktivan 4 mj, još 8 mj)
-//  Salon 5 (Style Lab)      → BASIC trial (14 dana)
+//  Salon 1 (Elite Cut)            → PRO  (aktivan 6 mj, još 6 mj)
+//  Salon 2 (Urban Barber)         → PRO  (aktivan 2 mj, još 10 mj)
+//  Salon 3 (Glam Studio)          → BASIC aktivan
+//  Salon 4 (Barber Kingdom)       → PRO  (aktivan 4 mj, još 8 mj)
+//  Salon 5 (Style Lab)            → BASIC trial (14 dana)
+//  Salon 6 (The Gentlemen's Club) → PRO  (aktivan 3 mj, još 9 mj)
+//  Salon 7 (Luxe Beauty Lounge)   → PRO  (aktivan 1 mj, još 11 mj)
+//  Salon 8 (Brico Studio)         → BASIC aktivan (2 tjedna)
 
 @Component
 @RequiredArgsConstructor
@@ -34,7 +37,8 @@ public class DataLoader implements CommandLineRunner {
         }
         log.info("=== Seed: portfolio-service ===");
 
-        // ── Planovi ──────────────────────────────────────────────────────
+        // ── Planovi ──────────────────────────────────────────────────────────
+
         SubscriptionPlan basicPlan = planRepository.save(
                 SubscriptionPlan.builder()
                         .planType(PlanType.BASIC)
@@ -67,7 +71,7 @@ public class DataLoader implements CommandLineRunner {
                         .build()
         );
 
-        // ── Pretplate ─────────────────────────────────────────────────────
+        // ── Pretplate ─────────────────────────────────────────────────────────
 
         // Salon 1 — Elite Cut → PRO (aktivan 6 mjeseci)
         subscriptionRepository.save(SalonSubscription.builder()
@@ -119,8 +123,38 @@ public class DataLoader implements CommandLineRunner {
                 .endDate(LocalDate.now().plusDays(16))
                 .build());
 
+        // Salon 6 — The Gentlemen's Club → PRO (aktivan 3 mjeseca)
+        subscriptionRepository.save(SalonSubscription.builder()
+                .salonId(6L)
+                .plan(proPlan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(LocalDate.now().minusMonths(3))
+                .endDate(LocalDate.now().plusMonths(9))
+                .stripeCustomerId("cus_gentlemens_club_brico")
+                .stripeSubscriptionId("sub_gentlemens_club_brico")
+                .build());
+
+        // Salon 7 — Luxe Beauty Lounge → PRO (aktivan 1 mjesec)
+        subscriptionRepository.save(SalonSubscription.builder()
+                .salonId(7L)
+                .plan(proPlan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(LocalDate.now().minusMonths(1))
+                .endDate(LocalDate.now().plusMonths(11))
+                .stripeCustomerId("cus_luxe_beauty_lounge_brico")
+                .stripeSubscriptionId("sub_luxe_beauty_lounge_brico")
+                .build());
+
+        // Salon 8 — Brico Studio → BASIC (aktivan 2 tjedna)
+        subscriptionRepository.save(SalonSubscription.builder()
+                .salonId(8L)
+                .plan(basicPlan)
+                .status(SubscriptionStatus.ACTIVE)
+                .startDate(LocalDate.now().minusWeeks(2))
+                .build());
+
         log.info("Kreirani planovi: BASIC (0 KM) i PRO (50 KM)");
-        log.info("Kreirano {} pretplata: 3xPRO, 2xBASIC", subscriptionRepository.count());
+        log.info("Kreirano {} pretplata: 5xPRO, 3xBASIC", subscriptionRepository.count());
         log.info("=== Portfolio Service seed završen ===");
     }
 }

@@ -219,5 +219,7 @@ brico-frontend/
 
 <div align="center">
 
-
+    Link na video
+    [snimak aplikacije](https://drive.google.com/file/d/1vF-l4RWqC3J0NHf4y-wUjMTE2v3vrw0U/view?usp=sharing)
+    
 </div>
